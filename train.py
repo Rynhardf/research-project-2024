@@ -126,7 +126,7 @@ def train_model(config):
 
             print(
                 f"Epoch [{epoch + 1}/{num_epochs}], Step [{batch_idx}/{len(train_loader)}], "
-                f"Loss: {loss.item():.4f}, Batch Time: {batch_time:.2f}s"
+                f"Loss: {loss.item():.6f}, Batch Time: {batch_time:.2f}s"
             )
 
         avg_train_loss = total_train_loss / len(train_loader)
@@ -136,8 +136,8 @@ def train_model(config):
         val_loss = validate(model, val_loader, criterion, device)
 
         print(
-            f"Epoch [{epoch + 1}/{num_epochs}], Training Loss: {avg_train_loss:.4f}, "
-            f"Validation Loss: {val_loss:.4f}, Epoch Time: {epoch_time:.2f}s"
+            f"Epoch [{epoch + 1}/{num_epochs}], Training Loss: {avg_train_loss:.6f}, "
+            f"Validation Loss: {val_loss:.6f}, Epoch Time: {epoch_time:.2f}s"
         )
 
         # Save epoch results
@@ -154,7 +154,7 @@ def train_model(config):
 
         if val_loss < best_val_loss:
             print(
-                f"Validation loss improved from {best_val_loss:.4f} to {val_loss:.4f}. Saving model..."
+                f"Validation loss improved from {best_val_loss:.6f} to {val_loss:.6f}. Saving model..."
             )
             best_val_loss = val_loss
             save_checkpoint(
