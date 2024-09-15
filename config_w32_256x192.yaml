@@ -30,8 +30,8 @@ dataset:
 
 model:
   name: "HRNet"
-  # weights: "weights/pose_hrnet_w32_256x192.pth"
-  weights: "runs/20240915_105454/checkpoint_epoch_5/weights.pth"
+  weights: "weights/pose_hrnet_w32_256x192.pth"
+  # weights: "runs/20240915_105454/checkpoint_epoch_5/weights.pth"
   input_size: [192, 256]
   output_size: [48, 64]
   config:
