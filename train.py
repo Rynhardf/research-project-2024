@@ -10,6 +10,7 @@ import time
 from datetime import datetime
 import json
 from utils import JointsMSELoss, load_config, save_config, load_model
+from utils import get_keypoints_from_heatmaps
 import argparse
 
 
@@ -99,7 +100,7 @@ def train_model(config):
 
         epoch_start_time = time.time()  # Start time of the epoch
 
-        for batch_idx, (images, targets, keypoints) in enumerate(train_loader):
+        for batch_idx, (images, targets, gt_keypoints) in enumerate(train_loader):
             batch_start_time = time.time()  # Start time of the batch
 
             images, targets = images.to(device), targets.to(device)
@@ -107,12 +108,9 @@ def train_model(config):
             optimizer.zero_grad()
             outputs = model(images)
 
-            # image = images[0].permute(1, 2, 0).cpu().numpy()
-            # target = targets[0].cpu().numpy()
-            # output = outputs[0].detach().cpu().numpy()
-            # keypoint = keypoints[0].cpu().numpy()
-            # visualize_output(image, keypoint, target)
-            # visualize_output(image, keypoint, output)
+            pred_keypoints = get_keypoints_from_heatmaps(
+                outputs.detach(), config["model"]["input_size"][::-1]
+            )
 
             loss = criterion(outputs, targets)
             loss.backward()
