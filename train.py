@@ -11,31 +11,7 @@ from datetime import datetime
 import json
 from utils.loss import JointsMSELoss
 import argparse
-
-
-def load_config(config_path):
-    with open(config_path, "r") as file:
-        config = yaml.safe_load(file)
-    return config
-
-
-def save_config(config, save_path):
-    with open(save_path, "w") as file:
-        yaml.dump(config, file)
-
-
-def get_model(config):
-    if config["name"] == "HRNet":
-        from models.HRNet.hrnet import PoseHighResolutionNet
-
-        model = PoseHighResolutionNet(config["config"])
-        if config["weights"]:
-            model.init_weights(config["weights"])
-    else:
-        raise ValueError(
-            f"Model {config['model']['name']} not recognized"
-        )  # Added error handling
-    return model
+from utils.utils import save_config, get_model
 
 
 def get_optimizer(config, model):
@@ -201,11 +177,3 @@ def train(config):
             results, file, indent=4
         )  # 'indent=4' makes the JSON file more readable
     print(f"Training complete. Results saved to {results_path}")
-
-
-parser = argparse.ArgumentParser()
-parser.add_argument("config", type=str)
-args = parser.parse_args()
-
-config = load_config(args.config)
-train(config)
