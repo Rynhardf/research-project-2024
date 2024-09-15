@@ -1,0 +1,6 @@
+data/
+runs/
+weights/
+example_images/
+myenv/
+__pycache__/

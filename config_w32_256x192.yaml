@@ -1,0 +1,73 @@
+dataset:
+  num_keypoints: 17
+  keypoints:
+    [
+      "C7",
+      "LFHD",
+      "RFHD",
+      "LBHD",
+      "RBHD",
+      "LSHO",
+      "LFIN",
+      "LEJC",
+      "REJC",
+      "LWJC",
+      "RWJC",
+      "RHEE",
+      "RTOE",
+      "LKJC",
+      "RKJC",
+      "LAJC",
+      "RAJC",
+    ]
+  file: "./data/cropped.csv"
+  img_dir: "./data/cropped_images"
+  val_split: 0.1
+  sigma: 1.0
+  preprocess:
+    resize: [192, 256]
+    output_size: [48, 64]
+
+model:
+  name: "HRNet"
+  # weights: "weights/pose_hrnet_w32_256x192.pth"
+  weights: "runs/20240915_105454/checkpoint_epoch_5/weights.pth"
+  input_size: [192, 256]
+  output_size: [48, 64]
+  config:
+    MODEL:
+      NUM_JOINTS: 17
+      EXTRA:
+        PRETRAINED_LAYERS: ["*"]
+        FINAL_CONV_KERNEL: 1
+
+        STAGE2:
+          NUM_MODULES: 1
+          NUM_BRANCHES: 2
+          NUM_BLOCKS: [4, 4]
+          NUM_CHANNELS: [32, 64]
+          BLOCK: "BASIC"
+          FUSE_METHOD: "SUM"
+
+        STAGE3:
+          NUM_MODULES: 4
+          NUM_BRANCHES: 3
+          NUM_BLOCKS: [4, 4, 4]
+          NUM_CHANNELS: [32, 64, 128]
+          BLOCK: "BASIC"
+          FUSE_METHOD: "SUM"
+
+        STAGE4:
+          NUM_MODULES: 3
+          NUM_BRANCHES: 4
+          NUM_BLOCKS: [4, 4, 4, 4]
+          NUM_CHANNELS: [32, 64, 128, 256]
+          BLOCK: "BASIC"
+          FUSE_METHOD: "SUM"
+
+training:
+  epochs: 5
+  batch_size: 16
+  optimizer: "adam"
+  learning_rate: 0.001
+  output_dir: "runs/"
