@@ -24,6 +24,7 @@ dataset:
   img_dir: "./data/cropped_images"
   val_split: 0.1
   sigma: 1.0
+  max_items: 1000
   preprocess:
     resize: [192, 256]
     output_size: [48, 64]
