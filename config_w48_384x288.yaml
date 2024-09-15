@@ -20,9 +20,9 @@ dataset:
       "LAJC",
       "RAJC",
     ]
-  file: "./data/cropped.csv"
+  train: "./data/train.csv"
+  val: "./data/val.csv"
   img_dir: "./data/cropped_images"
-  val_split: 0.1
   sigma: 3.0
   preprocess:
     resize: [288, 384]

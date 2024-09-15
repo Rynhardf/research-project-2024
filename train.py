@@ -62,13 +62,10 @@ def train_model(config):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Initialize dataset
-    dataset = PoseDataset(config["dataset"])
-    max_items = min(len(dataset), config["dataset"]["max_items"])
-    dataset = Subset(dataset, list(range(max_items)))
-    val_split = config["dataset"]["val_split"]
-    train_size = int((1 - val_split) * len(dataset))
-    val_size = len(dataset) - train_size
-    train_dataset, val_dataset = random_split(dataset, [train_size, val_size])
+    train_dataset = PoseDataset(config["dataset"], config["dataset"]["train"])
+    val_dataset = PoseDataset(config["dataset"], config["dataset"]["val"])
+    max_items = min(len(train_dataset), config["dataset"]["max_items"])
+    train_dataset = Subset(train_dataset, list(range(max_items)))
 
     # Data loaders
     batch_size = config["training"]["batch_size"]

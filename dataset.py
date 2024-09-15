@@ -73,14 +73,14 @@ all_keypoints = [
 
 
 class PoseDataset(Dataset):
-    def __init__(self, config):
-        self.file = config["file"]
+    def __init__(self, config, file):
         self.img_dir = config["img_dir"]
         self.keypoints = config["keypoints"]
         self.image_size = config["preprocess"]["resize"]
         self.output_size = config["preprocess"]["output_size"]
         self.sigma = config["sigma"]
 
+        self.file = file
         self.data = pd.read_csv(self.file)
         self.keypoint_columns = [
             col for col in self.data.columns if "_u" in col or "_v" in col
@@ -112,6 +112,8 @@ class PoseDataset(Dataset):
 
         image = cv2.resize(image, tuple(self.image_size))
         image = image / 255.0
+
+        keypoints[np.isnan(keypoints)] = 0
 
         return image, keypoints
 
