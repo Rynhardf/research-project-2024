@@ -11,7 +11,6 @@ from datetime import datetime
 import json
 from utils.loss import JointsMSELoss
 import argparse
-from utils.utils import save_config, get_model
 
 
 def load_config(config_path):
