@@ -1,6 +1,9 @@
 import torch
 import torch.nn as nn
 import yaml
+import cv2
+import numpy as np
+import os
 
 
 def load_config(config_path):
@@ -141,8 +144,6 @@ def visualize_output(image, keypoints, heatmaps):
     # Draw keypoints if they are provided
     if keypoints is not None:
         for point in keypoints:
-            if point is None or point[2] == 0:
-                continue  # Skip empty or invalid keypoints
             x, y = int(point[0]), int(point[1])
 
             # Draw a circle for each keypoint on the image
@@ -154,3 +155,54 @@ def visualize_output(image, keypoints, heatmaps):
     cv2.imshow("Visualization", overlayed_image)
     cv2.waitKey(0)  # Wait for a key press to close the window
     cv2.destroyAllWindows()
+
+
+def get_keypoints_from_heatmaps(heatmaps, image_size):
+    """
+    Convert predicted heatmaps to keypoint coordinates.
+
+    Args:
+    - heatmaps (numpy.ndarray or torch.Tensor): Heatmaps of shape (batch_size, num_keypoints, heatmap_height, heatmap_width)
+    - image_size (tuple): The original image size (image_height, image_width)
+
+    Returns:
+    - keypoints (numpy.ndarray): Predicted keypoint locations of shape (batch_size, num_keypoints, 2), where each keypoint is represented by (x, y) coordinates.
+    """
+
+    # Ensure the heatmaps are NumPy arrays
+    if isinstance(heatmaps, np.ndarray) is False:
+        heatmaps = heatmaps.cpu().numpy()  # In case it's a torch.Tensor
+
+    batch_size, num_keypoints, heatmap_height, heatmap_width = heatmaps.shape
+    img_height, img_width = image_size
+
+    # Initialize an array to store the predicted keypoints
+    keypoints = np.zeros((batch_size, num_keypoints, 2), dtype=np.float32)
+
+    for i in range(batch_size):
+        for j in range(num_keypoints):
+            # Find the index of the maximum value in the heatmap for each keypoint
+            max_pos = np.unravel_index(
+                np.argmax(heatmaps[i, j]), (heatmap_height, heatmap_width)
+            )
+            y, x = max_pos
+
+            # Scale the keypoint coordinates to the original image size
+            x = (x / heatmap_width) * img_width
+            y = (y / heatmap_height) * img_height
+
+            # Store the result
+            keypoints[i, j] = [x, y]
+
+    return keypoints
+
+
+def inference(config, images):
+    model = load_model(config["model"])
+
+    # Inference
+    model.eval()
+    with torch.no_grad():
+        output_batch = model(images)  # Get outputs for all images in the batch
+
+    return output_batch  # Returns the batch of outputs
