@@ -88,7 +88,7 @@ def train_model(config):
 
     # Initialize dataset
     dataset = PoseDataset(config["dataset"])
-    max_items = min(len(dataset), config["training"]["max_items"])
+    max_items = min(len(dataset), config["dataset"]["max_items"])
     dataset = Subset(dataset, list(range(max_items)))
     val_split = config["dataset"]["val_split"]
     train_size = int((1 - val_split) * len(dataset))
