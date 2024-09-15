@@ -1,10 +1,56 @@
-import cv2
-import csv
-import numpy as np
-import os
+import torch
+import torch.nn as nn
+import yaml
 
-# root_path = "/mnt/e/data_processed"
-root_path = "../data/cropped_images"
+
+def load_config(config_path):
+    with open(config_path, "r") as file:
+        config = yaml.safe_load(file)
+    return config
+
+
+def save_config(config, save_path):
+    with open(save_path, "w") as file:
+        yaml.dump(config, file)
+
+
+def load_model(config):
+    if config["name"] == "HRNet":
+        from models.HRNet.hrnet import PoseHighResolutionNet
+
+        model = PoseHighResolutionNet(config["config"])
+        if config["weights"]:
+            model.init_weights(config["weights"])
+    else:
+        raise ValueError(
+            f"Model {config['model']['name']} not recognized"
+        )  # Added error handling
+    return model
+
+
+class JointsMSELoss(nn.Module):
+    def __init__(self):
+        super(JointsMSELoss, self).__init__()
+        self.criterion = nn.MSELoss(reduction="mean")
+
+    def forward(self, output, target):
+        # # check if output or target contains NaN or Inf
+        # if torch.isnan(output).any():
+        #     print("Output contains NaN")
+        # if torch.isnan(target).any():
+        #     print("Target contains NaN")
+        batch_size = output.size(0)
+        num_joints = output.size(1)
+        heatmaps_pred = output.reshape((batch_size, num_joints, -1)).split(1, 1)
+        heatmaps_gt = target.reshape((batch_size, num_joints, -1)).split(1, 1)
+        loss = 0
+
+        for idx in range(num_joints):
+            heatmap_pred = heatmaps_pred[idx].squeeze()
+            heatmap_gt = heatmaps_gt[idx].squeeze()
+            loss += 0.5 * self.criterion(heatmap_pred, heatmap_gt)
+
+        return loss / num_joints
 
 
 # Function to draw keypoints on an image
@@ -108,63 +154,3 @@ def visualize_output(image, keypoints, heatmaps):
     cv2.imshow("Visualization", overlayed_image)
     cv2.waitKey(0)  # Wait for a key press to close the window
     cv2.destroyAllWindows()
-
-
-# # Read the CSV file and extract relevant data
-# csv_file = "../data/cropped.csv"
-
-# n = 0
-
-# include_box = True
-# cropped = True
-
-# with open(csv_file, newline="") as csvfile:
-#     csvreader = csv.reader(csvfile)
-
-#     # Skip the header if there is one
-#     next(csvreader)
-
-#     # Skip the first n rows
-#     for _ in range(n):
-#         next(csvreader)
-
-#     # Loop through each row in the CSV
-#     for row in csvreader:
-#         C = row[0]
-#         S = row[1]
-#         A = row[2]
-#         D = row[3]
-#         frame_num = row[4]
-
-#         # Image path
-#         image_path = row[5]  # Assuming the 6th column contains the image path
-
-#         if include_box:
-#             box_x = float(row[6])
-#             box_y = float(row[7])
-#             box_w = float(row[8])
-#             box_h = float(row[9])
-#             box = (box_x, box_y, box_w, box_h)
-#         else:
-#             box = None
-
-#         cropped_image_path = row[10]
-
-#         # Extract keypoints (assuming from the 7th column onwards are the x, y keypoints)
-#         if include_box:
-#             points = row[11:]
-#         else:
-#             points = row[6:]
-
-#         keypoints = []
-#         for point in points:
-#             if point == "":
-#                 keypoints.append(np.nan)
-#             else:
-#                 keypoints.append(float(point))
-
-#         # Draw and show keypoints on the image
-#         path = cropped_image_path if cropped else image_path
-#         if cropped:
-#             box = None
-#         draw_keypoints(path, keypoints, box, C, S, A, D, frame_num)

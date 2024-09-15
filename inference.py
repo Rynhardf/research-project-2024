@@ -5,23 +5,6 @@ import cv2
 import numpy as np
 
 
-def load_config(config_path):
-    with open(config_path, "r") as file:
-        config = yaml.safe_load(file)
-    return config
-
-
-def load_model(config):
-    if config["name"] == "HRNet":
-        from models.HRNet.hrnet import PoseHighResolutionNet
-
-        model = PoseHighResolutionNet(config["config"])
-        if config["weights"]:
-            model.init_weights(config["weights"])
-
-    return model
-
-
 # get config file path as argument
 parser = argparse.ArgumentParser()
 parser.add_argument("config", type=str)

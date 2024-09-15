@@ -5,37 +5,12 @@ from torch.utils.data import DataLoader, random_split, Subset
 import os
 from dataset import PoseDataset
 import cv2
-from utils.visualise import visualize_output
+from utils import visualize_output
 import time
 from datetime import datetime
 import json
-from utils.loss import JointsMSELoss
+from utils import JointsMSELoss, load_config, save_config, load_model
 import argparse
-
-
-def load_config(config_path):
-    with open(config_path, "r") as file:
-        config = yaml.safe_load(file)
-    return config
-
-
-def save_config(config, save_path):
-    with open(save_path, "w") as file:
-        yaml.dump(config, file)
-
-
-def get_model(config):
-    if config["name"] == "HRNet":
-        from models.HRNet.hrnet import PoseHighResolutionNet
-
-        model = PoseHighResolutionNet(config["config"])
-        if config["weights"]:
-            model.init_weights(config["weights"])
-    else:
-        raise ValueError(
-            f"Model {config['model']['name']} not recognized"
-        )  # Added error handling
-    return model
 
 
 def get_optimizer(config, model):
@@ -100,7 +75,7 @@ def train_model(config):
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 
-    model = get_model(config["model"]).to(device)
+    model = load_model(config["model"]).to(device)
     optimizer = get_optimizer(config, model)
     criterion = JointsMSELoss()
 
