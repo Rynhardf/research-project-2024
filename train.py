@@ -83,7 +83,7 @@ def validate(model, val_loader, criterion, device):
     return val_loss
 
 
-def train(config):
+def train_model(config):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Initialize dataset
