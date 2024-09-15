@@ -97,14 +97,14 @@ class PoseDataset(Dataset):
     def __getitem__(self, idx):
         image, keypoints = self.load_sample(idx)
 
-        image, keypoints = self.preprocess(image, keypoints)
+        image, keypoints, keypoint_visibility = self.preprocess(image, keypoints)
 
-        heatmaps = self.generate_heatmaps(keypoints)
+        heatmaps = self.generate_heatmaps(keypoints, keypoint_visibility)
 
         image = torch.tensor(image, dtype=torch.float32).permute(2, 0, 1)
         heatmaps = torch.from_numpy(heatmaps).float()
 
-        return image, heatmaps, keypoints
+        return image, heatmaps, keypoints, keypoint_visibility
 
     def preprocess(self, image, keypoints):
         keypoints[:, 0] = keypoints[:, 0] * self.image_size[0] / image.shape[1]
@@ -115,9 +115,15 @@ class PoseDataset(Dataset):
 
         keypoints[np.isnan(keypoints)] = 0
 
-        return image, keypoints
+        keypoint_visibility = keypoints[:, 2] > 0
+        keypoint_visibility = keypoint_visibility.astype(np.float32)
 
-    def generate_heatmaps(self, keypoints):
+        keypoints = keypoints.astype(np.float32)
+        keypoints = keypoints[:, :2]
+
+        return image, keypoints, keypoint_visibility
+
+    def generate_heatmaps(self, keypoints, keypoint_visibility):
         heatmaps = np.zeros(
             (len(keypoints), self.output_size[1], self.output_size[0]), dtype=np.float32
         )
@@ -128,6 +134,8 @@ class PoseDataset(Dataset):
         normalized_keypoints[:, 1] = normalized_keypoints[:, 1] / self.image_size[1]
 
         for i, keypoint in enumerate(normalized_keypoints):
+            if not keypoint_visibility[i]:
+                continue
             heatmaps[i] = self.gaussian_2d(self.output_size, keypoint, self.sigma)
 
         return heatmaps
@@ -136,7 +144,7 @@ class PoseDataset(Dataset):
         x = np.arange(0, size[0], 1, np.float32)
         y = np.arange(0, size[1], 1, np.float32)
         y = y[:, np.newaxis]
-        x0, y0, v = center
+        x0, y0 = center
 
         x0 = x0 * size[0]
         y0 = y0 * size[1]

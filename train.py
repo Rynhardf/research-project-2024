@@ -10,7 +10,7 @@ import time
 from datetime import datetime
 import json
 from utils import JointsMSELoss, load_config, save_config, load_model
-from utils import get_keypoints_from_heatmaps
+from utils import get_keypoints_from_heatmaps, normalized_mae_in_pixels
 import argparse
 
 
@@ -45,18 +45,30 @@ def save_checkpoint(checkpoint_dir, epoch, results, weights):
     print(f"Checkpoint saved to {checkpoint_dir}")
 
 
-def validate(model, val_loader, criterion, device):
+def validate(model, val_loader, criterion, device, input_size):
     model.eval()
     val_loss = 0
+    norm_mae = 0
     with torch.no_grad():
-        for images, targets, keypoints in val_loader:
+        for images, targets, gt_keypoints, keypoint_visibility in val_loader:
             images, targets = images.to(device), targets.to(device)
+            gt_keypoints = gt_keypoints.to(device)
+            keypoint_visibility = keypoint_visibility.to(device)
             outputs = model(images)
-            loss = criterion(outputs, targets)
+            pred_keypoints = get_keypoints_from_heatmaps(
+                outputs.detach(), input_size[::-1]
+            )
+            loss = criterion(outputs, targets, keypoint_visibility)
             val_loss += loss.item()
+
+            norm_mae += normalized_mae_in_pixels(
+                pred_keypoints, gt_keypoints, input_size, keypoint_visibility
+            )
+
     val_loss /= len(val_loader)
+    norm_mae /= len(val_loader)
     model.train()  # Set model back to training mode
-    return val_loss
+    return val_loss, norm_mae
 
 
 def train_model(config):
@@ -100,10 +112,13 @@ def train_model(config):
 
         epoch_start_time = time.time()  # Start time of the epoch
 
-        for batch_idx, (images, targets, gt_keypoints) in enumerate(train_loader):
+        for batch_idx, batch in enumerate(train_loader):
+            (images, targets, gt_keypoints, keypoint_visibility) = batch
             batch_start_time = time.time()  # Start time of the batch
 
             images, targets = images.to(device), targets.to(device)
+            gt_keypoints = gt_keypoints.to(device)
+            keypoint_visibility = keypoint_visibility.to(device)
 
             optimizer.zero_grad()
             outputs = model(images)
@@ -112,7 +127,7 @@ def train_model(config):
                 outputs.detach(), config["model"]["input_size"][::-1]
             )
 
-            loss = criterion(outputs, targets)
+            loss = criterion(outputs, targets, keypoint_visibility)
             loss.backward()
             optimizer.step()
 
@@ -131,11 +146,13 @@ def train_model(config):
 
         epoch_time = time.time() - epoch_start_time  # Total time for the epoch
 
-        val_loss = validate(model, val_loader, criterion, device)
+        val_loss, norm_mae = validate(
+            model, val_loader, criterion, device, config["model"]["input_size"]
+        )
 
         print(
             f"Epoch [{epoch + 1}/{num_epochs}], Training Loss: {avg_train_loss:.6f}, "
-            f"Validation Loss: {val_loss:.6f}, Epoch Time: {epoch_time:.2f}s"
+            f"Validation Loss: {val_loss:.6f}, Normalized MAE: {norm_mae:.6f}, Epoch Time: {epoch_time:.2f}s"
         )
 
         # Save epoch results
@@ -143,6 +160,7 @@ def train_model(config):
             "epoch": epoch + 1,
             "train_loss": avg_train_loss,
             "val_loss": val_loss,
+            "normalized_mae": norm_mae,
             "batch_losses": batch_losses,
             "batch_times": batch_times,
             "epoch_time": epoch_time,

@@ -36,22 +36,23 @@ class JointsMSELoss(nn.Module):
         super(JointsMSELoss, self).__init__()
         self.criterion = nn.MSELoss(reduction="mean")
 
-    def forward(self, output, target):
-        # # check if output or target contains NaN or Inf
-        # if torch.isnan(output).any():
-        #     print("Output contains NaN")
-        # if torch.isnan(target).any():
-        #     print("Target contains NaN")
+    def forward(self, output, target, keypoint_visibility):
         batch_size = output.size(0)
         num_joints = output.size(1)
-        heatmaps_pred = output.reshape((batch_size, num_joints, -1)).split(1, 1)
-        heatmaps_gt = target.reshape((batch_size, num_joints, -1)).split(1, 1)
+        heatmaps_pred = output.reshape((batch_size, num_joints, -1))
+        heatmaps_gt = target.reshape((batch_size, num_joints, -1))
         loss = 0
+        keypoint_visibility = keypoint_visibility.unsqueeze(-1)
 
         for idx in range(num_joints):
-            heatmap_pred = heatmaps_pred[idx].squeeze()
-            heatmap_gt = heatmaps_gt[idx].squeeze()
-            loss += 0.5 * self.criterion(heatmap_pred, heatmap_gt)
+            heatmap_pred = heatmaps_pred[:, idx]
+            heatmap_gt = heatmaps_gt[:, idx]
+
+            visible_pred = heatmap_pred * keypoint_visibility[:, idx]
+            visible_gt = heatmap_gt * keypoint_visibility[:, idx]
+
+            joint_loss = self.criterion(visible_pred, visible_gt)
+            loss += 0.5 * joint_loss
 
         return loss / num_joints
 
@@ -194,7 +195,7 @@ def get_keypoints_from_heatmaps(heatmaps, image_size):
             # Store the result
             keypoints[i, j] = [x, y]
 
-    return keypoints
+    return torch.tensor(keypoints)
 
 
 def inference(config, images):
@@ -206,3 +207,84 @@ def inference(config, images):
         output_batch = model(images)  # Get outputs for all images in the batch
 
     return output_batch  # Returns the batch of outputs
+
+
+def normalized_mae_in_pixels(predictions, targets, image_shape, keypoint_visibility):
+    """
+    Compute the normalized Mean Absolute Error (MAE) in pixels.
+    Normalized by the width of the input images, with visibility masking.
+
+    Args:
+        predictions: torch.Tensor (batch_size, num_keypoints, 2)
+            Model's predicted keypoint locations (x, y).
+        targets: torch.Tensor (batch_size, num_keypoints, 2)
+            Ground truth keypoint locations (x, y).
+        image_shape: tuple (int, int)
+            Dimensions of the input image (width, height) to normalize the error.
+        keypoint_visibility: torch.Tensor (batch_size, num_keypoints)
+            Visibility flags for keypoints (1 for visible, 0 for not visible).
+
+    Returns:
+        float: Normalized MAE in pixels.
+    """
+    image_width = image_shape[0]
+
+    # Ensure keypoint_visibility is broadcasted to (batch_size, num_keypoints, 2)
+    keypoint_visibility = keypoint_visibility.unsqueeze(-1).expand_as(predictions)
+
+    # Apply the visibility mask to both predictions and targets
+    visible_predictions = predictions * keypoint_visibility
+    visible_targets = targets * keypoint_visibility
+
+    # Compute the MAE only on visible keypoints
+    mae = torch.abs(visible_predictions - visible_targets).sum(
+        dim=(0, 1, 2)
+    )  # Sum over batch, keypoints, and coordinates
+    visible_count = keypoint_visibility.sum(dim=(0, 1, 2))  # Count of visible keypoints
+
+    # Avoid division by zero if there are no visible keypoints
+    if visible_count > 0:
+        normalized_mae = mae / (visible_count * image_width)
+    else:
+        normalized_mae = 0.0  # If no keypoints are visible, set MAE to 0
+
+    return normalized_mae.item()  # Return as scalar
+
+
+def compute_oks(predictions, targets, keypoint_visibility, sigmas, image_area):
+    """
+    Compute Object Keypoint Similarity (OKS).
+
+    Args:
+        predictions: torch.Tensor (batch_size, num_keypoints, 2)
+            Model's predicted keypoint locations (x, y).
+        targets: torch.Tensor (batch_size, num_keypoints, 2)
+            Ground truth keypoint locations (x, y).
+        keypoint_visibility: torch.Tensor (batch_size, num_keypoints)
+            Visibility flags for keypoints (1 for visible, 0 for not visible).
+        sigmas: torch.Tensor (num_keypoints,)
+            Standard deviation values per keypoint type to weight their importance.
+        image_area: float
+            Area of the object (bounding box area, or entire image area).
+
+    Returns:
+        float: OKS score.
+    """
+    # Compute the squared Euclidean distance between predicted and ground truth keypoints
+    d_sq = ((predictions - targets) ** 2).sum(
+        dim=-1
+    )  # Shape (batch_size, num_keypoints)
+
+    # Scale distance by the area and keypoint-specific sigma
+    scaled_d_sq = d_sq / (2 * (sigmas**2) * image_area)
+
+    # Apply keypoint visibility mask
+    oks = torch.exp(-scaled_d_sq) * keypoint_visibility
+
+    # Average OKS over all visible keypoints and batches
+    visible_count = keypoint_visibility.sum(
+        dim=1
+    )  # Count of visible keypoints per batch
+    oks_mean = (oks.sum(dim=1) / visible_count).mean()  # Mean OKS across the batch
+
+    return oks_mean.item()  # Return as scalar
