@@ -347,6 +347,7 @@ class PoseHighResolutionNet(nn.Module):
         )
 
         self.pretrained_layers = extra["PRETRAINED_LAYERS"]
+        self.num_joints = cfg["MODEL"]["NUM_JOINTS"]
 
     def _make_transition_layer(self, num_channels_pre_layer, num_channels_cur_layer):
         num_branches_cur = len(num_channels_cur_layer)
@@ -513,6 +514,11 @@ class PoseHighResolutionNet(nn.Module):
                     name.split(".")[0] in self.pretrained_layers
                     or self.pretrained_layers[0] == "*"
                 ):
+                    if "final_layer" in name and self.num_joints != 17:
+                        logger.info(
+                            f"Skipping loading weights for {name} due to different number of joints"
+                        )
+                        continue
                     need_init_state_dict[name] = m
             self.load_state_dict(need_init_state_dict, strict=False)
         elif pretrained:
