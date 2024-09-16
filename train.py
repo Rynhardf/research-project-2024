@@ -39,7 +39,7 @@ def save_checkpoint(checkpoint_dir, epoch, results, weights):
     with open(results_path, "w") as file:
         json.dump(results, file, indent=4)
 
-    weights_path = os.path.join(checkpoint_dir, f"weights_epoch_{epoch}.pt")
+    weights_path = os.path.join(checkpoint_dir, f"weights_epoch_{epoch}.pth")
     torch.save(weights, weights_path)
 
     print(f"Checkpoint saved to {checkpoint_dir}")
