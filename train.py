@@ -104,6 +104,23 @@ def train_model(config):
     # To log results
     results = {"epochs": []}
 
+    # do one validation run before starting the training
+    val_loss, norm_mae = validate(
+        model, val_loader, criterion, device, config["model"]["input_size"]
+    )
+
+    print(
+        f"Epoch [0/{num_epochs}],"
+        f"Validation Loss: {val_loss:.6f}, Normalized MAE: {norm_mae:.6f}"
+    )
+    # Save epoch results
+    epoch_result = {
+        "val_loss": val_loss,
+        "normalized_mae": norm_mae,
+    }
+
+    results["epochs"].append(epoch_result)
+
     for epoch in range(num_epochs):
         model.train()
         total_train_loss = 0
