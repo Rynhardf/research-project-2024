@@ -160,42 +160,45 @@ def visualize_output(image, keypoints, heatmaps):
 
 def get_keypoints_from_heatmaps(heatmaps, image_size):
     """
-    Convert predicted heatmaps to keypoint coordinates.
+    Convert predicted heatmaps to keypoint coordinates using PyTorch.
 
     Args:
-    - heatmaps (numpy.ndarray or torch.Tensor): Heatmaps of shape (batch_size, num_keypoints, heatmap_height, heatmap_width)
+    - heatmaps (torch.Tensor): Heatmaps of shape (batch_size, num_keypoints, heatmap_height, heatmap_width)
     - image_size (tuple): The original image size (image_height, image_width)
 
     Returns:
-    - keypoints (numpy.ndarray): Predicted keypoint locations of shape (batch_size, num_keypoints, 2), where each keypoint is represented by (x, y) coordinates.
+    - keypoints (torch.Tensor): Predicted keypoint locations of shape (batch_size, num_keypoints, 2),
+                                where each keypoint is represented by (x, y) coordinates.
     """
-
-    # Ensure the heatmaps are NumPy arrays
-    if isinstance(heatmaps, np.ndarray) is False:
-        heatmaps = heatmaps.cpu().numpy()  # In case it's a torch.Tensor
+    # Ensure the heatmaps are torch tensors (if not already)
+    if not isinstance(heatmaps, torch.Tensor):
+        raise TypeError("Heatmaps should be a torch.Tensor")
 
     batch_size, num_keypoints, heatmap_height, heatmap_width = heatmaps.shape
     img_height, img_width = image_size
 
-    # Initialize an array to store the predicted keypoints
-    keypoints = np.zeros((batch_size, num_keypoints, 2), dtype=np.float32)
+    # Flatten the heatmap to find the maximum value positions
+    heatmaps_reshaped = heatmaps.view(
+        batch_size, num_keypoints, -1
+    )  # Flatten height and width into one dimension
+    max_vals, max_indices = torch.max(
+        heatmaps_reshaped, dim=-1
+    )  # Find max value and corresponding index in flattened heatmap
 
-    for i in range(batch_size):
-        for j in range(num_keypoints):
-            # Find the index of the maximum value in the heatmap for each keypoint
-            max_pos = np.unravel_index(
-                np.argmax(heatmaps[i, j]), (heatmap_height, heatmap_width)
-            )
-            y, x = max_pos
+    # Convert the 1D indices back to 2D coordinates
+    max_indices_x = max_indices % heatmap_width
+    max_indices_y = max_indices // heatmap_width
 
-            # Scale the keypoint coordinates to the original image size
-            x = (x / heatmap_width) * img_width
-            y = (y / heatmap_height) * img_height
+    # Scale the coordinates to match the original image size
+    max_indices_x = (max_indices_x.float() / heatmap_width) * img_width
+    max_indices_y = (max_indices_y.float() / heatmap_height) * img_height
 
-            # Store the result
-            keypoints[i, j] = [x, y]
+    # Stack the x and y coordinates
+    keypoints = torch.stack(
+        [max_indices_x, max_indices_y], dim=-1
+    )  # Shape: (batch_size, num_keypoints, 2)
 
-    return torch.tensor(keypoints)
+    return keypoints
 
 
 def inference(config, images):
