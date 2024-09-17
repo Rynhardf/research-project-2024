@@ -24,6 +24,18 @@ def load_model(config):
         model = PoseHighResolutionNet(config["config"])
         if config["weights"]:
             model.init_weights(config["weights"])
+    elif config["name"] == "ViTPose":
+        from models.ViTPose.vitpose import get_vitpose_model
+
+        model = get_vitpose_model(
+            variant=config["variant"],
+            num_joints=config["num_joints"],
+            decoder=config["decoder"],
+        )
+
+        if config["weights"]:
+            weights = torch.load(config["weights"])["state_dict"]
+            model.init_weights(weights)
     else:
         raise ValueError(
             f"Model {config['model']['name']} not recognized"
@@ -178,7 +190,7 @@ def get_keypoints_from_heatmaps(heatmaps, image_size):
     img_height, img_width = image_size
 
     # Flatten the heatmap to find the maximum value positions
-    heatmaps_reshaped = heatmaps.view(
+    heatmaps_reshaped = heatmaps.reshape(
         batch_size, num_keypoints, -1
     )  # Flatten height and width into one dimension
     max_vals, max_indices = torch.max(

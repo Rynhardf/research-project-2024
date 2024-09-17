@@ -1,0 +1,46 @@
+dataset:
+  num_keypoints: 17
+  keypoints:
+    [
+      "C7",
+      "LFHD",
+      "RFHD",
+      "LBHD",
+      "RBHD",
+      "LSHO",
+      "LFIN",
+      "LEJC",
+      "REJC",
+      "LWJC",
+      "RWJC",
+      "RHEE",
+      "RTOE",
+      "LKJC",
+      "RKJC",
+      "LAJC",
+      "RAJC",
+    ]
+  val: "./data/val.csv"
+  train: "./data/train.csv"
+  img_dir: "./data/cropped_images"
+  sigma: 1.0
+  max_items: 100
+  preprocess:
+    resize: [192, 256]
+    output_size: [48, 64]
+
+model:
+  name: "ViTPose"
+  weights: "weights/vitpose-b-simple.pth"
+  input_size: [192, 256]
+  output_size: [48, 64]
+  num_joints: 17
+  variant: "B"
+  decoder: "simple"
+
+training:
+  epochs: 5
+  batch_size: 16
+  optimizer: "adam"
+  learning_rate: 0.001
+  output_dir: "runs/"
