@@ -35,6 +35,8 @@ def load_model(config):
 
         if config["weights"]:
             weights = torch.load(config["weights"])
+            if 'state_dict' in weights:
+                weights = weights['state_dict']
             model.init_weights(weights)
     else:
         raise ValueError(

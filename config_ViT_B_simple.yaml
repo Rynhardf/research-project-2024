@@ -23,7 +23,7 @@ dataset:
   val: "./data/val.csv"
   train: "./data/train.csv"
   img_dir: "./data/cropped"
-  sigma: 1.0
+  sigma: 3.0
   preprocess:
     resize: [192, 256]
     output_size: [48, 64]
