@@ -122,36 +122,37 @@ class ClassicDecoder(nn.Module):
         """
         super(ClassicDecoder, self).__init__()
 
+        internal_channels = 256
         # First deconvolution block (upsample by 2)
         self.deconv_layers = nn.Sequential(
             nn.ConvTranspose2d(
                 in_channels=in_channels,
-                out_channels=256,
+                out_channels=internal_channels,
                 kernel_size=4,
                 stride=2,
                 padding=1,
                 output_padding=0,
                 bias=False,
             ),
-            nn.BatchNorm2d(256),
+            nn.BatchNorm2d(internal_channels),
             nn.ReLU(inplace=True),
             # Second deconvolution block (upsample by 2)
             nn.ConvTranspose2d(
-                in_channels=256,
-                out_channels=256,
+                in_channels=internal_channels,
+                out_channels=internal_channels,
                 kernel_size=4,
                 stride=2,
                 padding=1,
                 output_padding=0,
                 bias=False,
             ),
-            nn.BatchNorm2d(256),
+            nn.BatchNorm2d(internal_channels),
             nn.ReLU(inplace=True),
         )
 
         # Final 1x1 convolution to output keypoint heatmaps
         self.final_layer = nn.Conv2d(
-            in_channels=256,
+            in_channels=internal_channels,
             out_channels=out_channels,
             kernel_size=1,
             stride=1,
