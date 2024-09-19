@@ -36,6 +36,8 @@ model:
   num_joints: 17
   variant: "B"
   decoder: "classic"
+  freeze:
+    backbone: True
 
 training:
   epochs: 5

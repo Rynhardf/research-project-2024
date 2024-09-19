@@ -16,6 +16,16 @@ def save_config(config, save_path):
     with open(save_path, "w") as file:
         yaml.dump(config, file)
 
+def recursive_freeze(module, layer_config):
+    for layer_name, freeze_or_subconfig in layer_config.items():
+        if isinstance(freeze_or_subconfig, bool):
+            if freeze_or_subconfig and hasattr(module, layer_name):
+                for param in getattr(module, layer_name).parameters():
+                    param.requires_grad = False
+        elif isinstance(freeze_or_subconfig, dict):
+            if hasattr(module, layer_name):
+                submodule = getattr(module, layer_name)
+                recursive_freeze(submodule, freeze_or_subconfig)
 
 def load_model(config):
     if config["name"] == "HRNet":
@@ -42,6 +52,10 @@ def load_model(config):
         raise ValueError(
             f"Model {config['model']['name']} not recognized"
         )  # Added error handling
+    
+    if "freeze" in config:
+        recursive_freeze(model, config["freeze"])
+
     return model
 
 
