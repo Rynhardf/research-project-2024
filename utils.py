@@ -53,7 +53,7 @@ def load_model(config):
             f"Model {config['model']['name']} not recognized"
         )  # Added error handling
     
-    if "freeze" in config:
+    if "freeze" in config.keys():
         recursive_freeze(model, config["freeze"])
 
     return model
