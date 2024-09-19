@@ -214,14 +214,16 @@ def get_keypoints_from_heatmaps(heatmaps, image_size):
 
 
 def inference(config, images):
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = load_model(config["model"])
-
+    model = model.to(device)
+    images = images.to(device)
     # Inference
     model.eval()
     with torch.no_grad():
         output_batch = model(images)  # Get outputs for all images in the batch
 
-    return output_batch  # Returns the batch of outputs
+    return output_batch.cpu()
 
 
 def normalized_mae_in_pixels(predictions, targets, image_shape, keypoint_visibility):

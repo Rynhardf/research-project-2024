@@ -77,13 +77,11 @@ def train_model(config):
     # Initialize dataset
     train_dataset = PoseDataset(config["dataset"], config["dataset"]["train"])
     val_dataset = PoseDataset(config["dataset"], config["dataset"]["val"])
-    max_items = min(len(train_dataset), config["dataset"]["max_items"])
-    train_dataset = Subset(train_dataset, list(range(max_items)))
 
     # Data loaders
     batch_size = config["training"]["batch_size"]
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=8)
 
     model = load_model(config["model"]).to(device)
     optimizer = get_optimizer(config, model)
@@ -103,7 +101,7 @@ def train_model(config):
 
     # To log results
     results = {"epochs": []}
-
+    
     # do one validation run before starting the training
     val_loss, norm_mae = validate(
         model, val_loader, criterion, device, config["model"]["input_size"]

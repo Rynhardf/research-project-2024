@@ -1,76 +1,29 @@
 dataset:
-  num_keypoints: 63
+  num_keypoints: 17
   keypoints:
     [
       "C7",
-      "CLAV",
-      "CentreOfMass",
-      "CentreOfMassFloor",
-      "LAJC",
-      "LANK",
-      "LASI",
-      "LBHD",
-      "LEJC",
-      "LELB",
       "LFHD",
-      "LFIN",
-      "LFRM",
-      "LHEE",
-      "LHJC",
-      "LKJC",
-      "LKNE",
-      "LMMED",
-      "LPSI",
-      "LSHO",
-      "LSJC",
-      "LTHI",
-      "LTIB",
-      "LTOE",
-      "LUPA",
-      "LWJC",
-      "LWRA",
-      "LWRB",
-      "L_Foot_Out",
-      "MElbowL",
-      "MElbowR",
-      "MKNEL",
-      "MKNER",
-      "PelL",
-      "PelR",
-      "RAJC",
-      "RANK",
-      "RASI",
-      "RBAK",
-      "RBHD",
-      "REJC",
-      "RELB",
       "RFHD",
-      "RFIN",
-      "RFRM",
-      "RHEE",
-      "RHJC",
-      "RKJC",
-      "RKNE",
-      "RMMED",
-      "RPSI",
-      "RSHO",
-      "RSJC",
-      "RTHI",
-      "RTIB",
-      "RTOE",
-      "RUPA",
+      "LBHD",
+      "RBHD",
+      "LSHO",
+      "LFIN",
+      "LEJC",
+      "REJC",
+      "LWJC",
       "RWJC",
-      "RWRA",
-      "RWRB",
-      "R_Foot_Out",
-      "STRN",
-      "T10",
+      "RHEE",
+      "RTOE",
+      "LKJC",
+      "RKJC",
+      "LAJC",
+      "RAJC",
     ]
   val: "./data/val.csv"
   train: "./data/train.csv"
-  img_dir: "./data/cropped_images"
+  img_dir: "./data/cropped"
   sigma: 1.0
-  max_items: 1000
   preprocess:
     resize: [192, 256]
     output_size: [48, 64]
@@ -83,7 +36,7 @@ model:
   output_size: [48, 64]
   config:
     MODEL:
-      NUM_JOINTS: 63
+      NUM_JOINTS: 17
       EXTRA:
         PRETRAINED_LAYERS: ["*"]
         FINAL_CONV_KERNEL: 1
@@ -114,7 +67,7 @@ model:
 
 training:
   epochs: 5
-  batch_size: 16
+  batch_size: 128
   optimizer: "adam"
   learning_rate: 0.001
   output_dir: "runs/"
