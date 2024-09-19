@@ -22,9 +22,8 @@ dataset:
     ]
   val: "./data/val.csv"
   train: "./data/train.csv"
-  img_dir: "./data/cropped_images"
+  img_dir: "./data/cropped"
   sigma: 1.0
-  max_items: 100
   preprocess:
     resize: [192, 256]
     output_size: [48, 64]
@@ -40,7 +39,7 @@ model:
 
 training:
   epochs: 5
-  batch_size: 16
+  batch_size: 512
   optimizer: "adam"
   learning_rate: 0.001
   output_dir: "runs/"

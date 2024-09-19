@@ -149,8 +149,6 @@ class PoseDataset(Dataset):
         x0 = x0 * size[0]
         y0 = y0 * size[1]
 
-        # TODO: handle keypoints that are not visible v = 0
-
         gaussian = np.exp(-((x - x0) ** 2 + (y - y0) ** 2) / (2 * sigma**2))
 
         gaussian = gaussian / np.max(gaussian)

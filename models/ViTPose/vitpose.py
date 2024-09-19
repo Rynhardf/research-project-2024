@@ -57,11 +57,11 @@ class ViTPose(nn.Module):
         return x
 
     def init_weights(self, weights):
-        weights["backbone.norm.weight"] = weights["backbone.last_norm.weight"]
-        weights["backbone.norm.bias"] = weights["backbone.last_norm.bias"]
-        del weights["backbone.last_norm.weight"]
-        del weights["backbone.last_norm.bias"]
-
+        if "backbone.last_norm.weight" in weights:
+            weights["backbone.norm.weight"] = weights["backbone.last_norm.weight"]
+            weights["backbone.norm.bias"] = weights["backbone.last_norm.bias"]
+            del weights["backbone.last_norm.weight"]
+            del weights["backbone.last_norm.bias"]
         # load and check if success
         r = self.load_state_dict(weights, strict=False)
         if r.missing_keys:
