@@ -194,7 +194,8 @@ def visualize_output(image, keypoints, heatmaps):
 
 def get_keypoints_from_heatmaps(heatmaps, image_size):
     """
-    Convert predicted heatmaps to keypoint coordinates using PyTorch.
+    Convert predicted heatmaps to keypoint coordinates using PyTorch, adding a quarter of the distance 
+    to the next highest value to refine the keypoint location.
 
     Args:
     - heatmaps (torch.Tensor): Heatmaps of shape (batch_size, num_keypoints, heatmap_height, heatmap_width)
@@ -215,21 +216,39 @@ def get_keypoints_from_heatmaps(heatmaps, image_size):
     heatmaps_reshaped = heatmaps.reshape(
         batch_size, num_keypoints, -1
     )  # Flatten height and width into one dimension
-    max_vals, max_indices = torch.max(
-        heatmaps_reshaped, dim=-1
-    )  # Find max value and corresponding index in flattened heatmap
+    
+    # Find max value and corresponding index in flattened heatmap
+    max_vals, max_indices = torch.max(heatmaps_reshaped, dim=-1)
+
+    # Zero out the maximum value positions in the heatmap to find the second max
+    heatmaps_reshaped_clone = heatmaps_reshaped.clone()
+    heatmaps_reshaped_clone.scatter_(-1, max_indices.unsqueeze(-1), -float('inf'))
+
+    # Find second maximum values and indices
+    second_max_vals, second_max_indices = torch.max(heatmaps_reshaped_clone, dim=-1)
 
     # Convert the 1D indices back to 2D coordinates
     max_indices_x = max_indices % heatmap_width
     max_indices_y = max_indices // heatmap_width
 
+    second_max_indices_x = second_max_indices % heatmap_width
+    second_max_indices_y = second_max_indices // heatmap_width
+
+    # Compute the quarter-distance shift
+    delta_x = (second_max_indices_x.float() - max_indices_x.float()) * 0.25
+    delta_y = (second_max_indices_y.float() - max_indices_y.float()) * 0.25
+
+    # Refine the coordinates by adding the quarter distance
+    refined_max_indices_x = max_indices_x.float() + delta_x
+    refined_max_indices_y = max_indices_y.float() + delta_y
+
     # Scale the coordinates to match the original image size
-    max_indices_x = (max_indices_x.float() / heatmap_width) * img_width
-    max_indices_y = (max_indices_y.float() / heatmap_height) * img_height
+    refined_max_indices_x = (refined_max_indices_x / heatmap_width) * img_width
+    refined_max_indices_y = (refined_max_indices_y / heatmap_height) * img_height
 
     # Stack the x and y coordinates
     keypoints = torch.stack(
-        [max_indices_x, max_indices_y], dim=-1
+        [refined_max_indices_x, refined_max_indices_y], dim=-1
     )  # Shape: (batch_size, num_keypoints, 2)
 
     return keypoints
