@@ -64,26 +64,43 @@ def get_anc_index(gt_keypoints, scale_size=80, input_size=(640, 640)):
     cell_size_x = input_size[0] / scale_size
     cell_size_y = input_size[1] / scale_size
 
-    anc_x = gt_keypoints[:, 0] // cell_size_x
-    anc_y = gt_keypoints[:, 1] // cell_size_y
+    anc_x = gt_keypoints[:, :, 0] // cell_size_x
+    anc_y = gt_keypoints[:, :, 1] // cell_size_y
 
-    return anc_x, anc_y
+    # return as one index out of the flattened 1600
+    idx = anc_x * scale_size + anc_y
+
+    return idx.to(torch.int64)
 
 
-def loss(output, gt_keypoints, scale_sizes, image_size=(640, 640)):
+def loss_yolo(
+    output,
+    gt_keypoints,
+    keypoint_visibility,
+    scale_sizes=[80, 40, 20],
+    image_size=(640, 640),
+):
     scales = output_to_scales(output)
+
+    # combine keypoint visibility with gt_keypoints
+    gt_keypoints = torch.cat([gt_keypoints, keypoint_visibility.unsqueeze(-1)], dim=2)
 
     loss = 0
     for scale, scale_size in zip(scales, scale_sizes):
-        anc_x, anc_y = get_anc_index(
-            gt_keypoints, scale_size=scale_size, input_size=image_size
-        )
+        idx = get_anc_index(gt_keypoints, scale_size=scale_size, input_size=image_size)
+
+        idx = idx.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, 3, -1)
+
+        result = torch.gather(scale, dim=3, index=idx).squeeze(
+            -1
+        )  # Shape: [batch_size, 17, 3]
 
         conf_loss = torch.nn.functional.binary_cross_entropy(
-            scale[anc_x, anc_y, 2, :], gt_keypoints[:, 2]
+            result[:, :, 2], gt_keypoints[:, :, 2]
         )
+
         loc_loss = torch.nn.functional.mse_loss(
-            scale[anc_x, anc_y, :2, :], gt_keypoints[:, :2]
+            result[:, :, :2], gt_keypoints[:, :, :2]
         )
 
         loss += conf_loss + loc_loss
