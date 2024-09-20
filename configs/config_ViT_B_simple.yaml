@@ -25,7 +25,7 @@ dataset:
   img_dir: "./data/cropped"
   sigma: 3.0
   preprocess:
-    resize: [192, 256]
+    input_size: [192, 256]
     output_size: [48, 64]
 
 model:
