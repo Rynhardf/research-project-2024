@@ -31,9 +31,13 @@ def recursive_freeze(module, layer_config):
 
 def load_model(config):
     if config["name"] == "HRNet":
-        from models.HRNet.hrnet import PoseHighResolutionNet
+        from models.HRNet.hrnet import get_pose_model
 
-        model = PoseHighResolutionNet(config["config"])
+        model = get_pose_model(
+            config["W"],
+            config["num_joints"],
+        )
+        
         if config["weights"]:
             model.init_weights(config["weights"])
     elif config["name"] == "ViTPose":

@@ -73,6 +73,8 @@ def validate(model, val_loader, criterion, device, input_size):
 
 def train_model(config):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    input_size = config["dataset"]["preprocess"]["input_size"]
+    output_size = config["dataset"]["preprocess"]["output_size"]
 
     # Initialize dataset
     train_dataset = PoseDataset(config["dataset"], config["dataset"]["train"])
@@ -104,7 +106,7 @@ def train_model(config):
     
     # do one validation run before starting the training
     val_loss, norm_mae = validate(
-        model, val_loader, criterion, device, config["model"]["input_size"]
+        model, val_loader, criterion, device, input_size
     )
 
     print(
@@ -139,7 +141,7 @@ def train_model(config):
             outputs = model(images)
 
             pred_keypoints = get_keypoints_from_heatmaps(
-                outputs.detach(), config["model"]["input_size"][::-1]
+                outputs.detach(), input_size[::-1]
             )
 
             loss = criterion(outputs, targets, keypoint_visibility)
@@ -162,7 +164,7 @@ def train_model(config):
         epoch_time = time.time() - epoch_start_time  # Total time for the epoch
 
         val_loss, norm_mae = validate(
-            model, val_loader, criterion, device, config["model"]["input_size"]
+            model, val_loader, criterion, device, input_size
         )
 
         print(
