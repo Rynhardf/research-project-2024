@@ -16,6 +16,7 @@ def save_config(config, save_path):
     with open(save_path, "w") as file:
         yaml.dump(config, file)
 
+
 def recursive_freeze(module, layer_config):
     for layer_name, freeze_or_subconfig in layer_config.items():
         if isinstance(freeze_or_subconfig, bool):
@@ -26,6 +27,7 @@ def recursive_freeze(module, layer_config):
             if hasattr(module, layer_name):
                 submodule = getattr(module, layer_name)
                 recursive_freeze(submodule, freeze_or_subconfig)
+
 
 def load_model(config):
     if config["name"] == "HRNet":
@@ -45,14 +47,14 @@ def load_model(config):
 
         if config["weights"]:
             weights = torch.load(config["weights"])
-            if 'state_dict' in weights.keys():
-                weights = weights['state_dict']
+            if "state_dict" in weights.keys():
+                weights = weights["state_dict"]
             model.init_weights(weights)
     else:
         raise ValueError(
             f"Model {config['model']['name']} not recognized"
         )  # Added error handling
-    
+
     if "freeze" in config.keys():
         recursive_freeze(model, config["freeze"])
 
@@ -245,7 +247,7 @@ def inference(config, images):
 def normalized_mae_in_pixels(predictions, targets, image_shape, keypoint_visibility):
     """
     Compute the normalized Mean Absolute Error (MAE) in pixels.
-    Normalized by the width of the input images, with visibility masking.
+    Normalized by the diagonal of the input images, with visibility masking.
 
     Args:
         predictions: torch.Tensor (batch_size, num_keypoints, 2)
@@ -260,28 +262,34 @@ def normalized_mae_in_pixels(predictions, targets, image_shape, keypoint_visibil
     Returns:
         float: Normalized MAE in pixels.
     """
-    image_width = image_shape[0]
+    image_width, image_height = image_shape
+    image_diagonal = torch.sqrt(
+        torch.tensor(image_width**2 + image_height**2, dtype=torch.float32)
+    )
 
     # Ensure keypoint_visibility is broadcasted to (batch_size, num_keypoints, 2)
     keypoint_visibility = keypoint_visibility.unsqueeze(-1).expand_as(predictions)
 
-    # Apply the visibility mask to both predictions and targets
     visible_predictions = predictions * keypoint_visibility
     visible_targets = targets * keypoint_visibility
 
-    # Compute the MAE only on visible keypoints
-    mae = torch.abs(visible_predictions - visible_targets).sum(
-        dim=(0, 1, 2)
-    )  # Sum over batch, keypoints, and coordinates
-    visible_count = keypoint_visibility.sum(dim=(0, 1, 2))  # Count of visible keypoints
+    euclidean_error = torch.sqrt(
+        torch.sum((visible_predictions - visible_targets) ** 2, dim=-1)
+    )
+
+    # Sum over all keypoints and batches
+    total_error = euclidean_error.sum(dim=(0, 1))
+    visible_count = keypoint_visibility[..., 0].sum(
+        dim=(0, 1)
+    )  # Count visible keypoints
 
     # Avoid division by zero if there are no visible keypoints
     if visible_count > 0:
-        normalized_mae = mae / (visible_count * image_width)
+        normalized_mae = total_error / (visible_count * image_diagonal)
     else:
         normalized_mae = 0.0  # If no keypoints are visible, set MAE to 0
 
-    return normalized_mae.item()  # Return as scalar
+    return normalized_mae.item() * 100
 
 
 def compute_oks(predictions, targets, keypoint_visibility, sigmas, image_area):
