@@ -76,7 +76,7 @@ class PoseDataset(Dataset):
     def __init__(self, config, file):
         self.img_dir = config["img_dir"]
         self.keypoints = config["keypoints"]
-        self.image_size = config["preprocess"]["resize"]
+        self.image_size = config["preprocess"]["input_size"]
         self.output_size = config["preprocess"]["output_size"]
         self.sigma = config["sigma"]
 

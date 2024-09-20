@@ -14,6 +14,8 @@ import logging
 import torch
 import torch.nn as nn
 
+import yaml
+
 
 BN_MOMENTUM = 0.1
 logger = logging.getLogger(__name__)
@@ -531,5 +533,58 @@ def get_pose_net(cfg, is_train, **kwargs):
 
     if is_train and cfg.MODEL.INIT_WEIGHTS:
         model.init_weights(cfg.MODEL.PRETRAINED)
+
+    return model
+
+default_cfg = {
+    "MODEL": {
+        "NUM_JOINTS": 17,
+        "EXTRA": {
+            "PRETRAINED_LAYERS": ["*"],
+            "FINAL_CONV_KERNEL": 1,
+            "STAGE2": {
+                "NUM_MODULES": 1,
+                "NUM_BRANCHES": 2,
+                "NUM_BLOCKS": [4, 4],
+                "NUM_CHANNELS": [32, 64],
+                "BLOCK": "BASIC",
+                "FUSE_METHOD": "SUM"
+            },
+            "STAGE3": {
+                "NUM_MODULES": 4,
+                "NUM_BRANCHES": 3,
+                "NUM_BLOCKS": [4, 4, 4],
+                "NUM_CHANNELS": [32, 64, 128],
+                "BLOCK": "BASIC",
+                "FUSE_METHOD": "SUM"
+            },
+            "STAGE4": {
+                "NUM_MODULES": 3,
+                "NUM_BRANCHES": 4,
+                "NUM_BLOCKS": [4, 4, 4, 4],
+                "NUM_CHANNELS": [32, 64, 128, 256],
+                "BLOCK": "BASIC",
+                "FUSE_METHOD": "SUM"
+            }
+        }
+    }
+}
+
+
+def get_pose_model(W,num_joints):
+    cfg = default_cfg
+
+    cfg['MODEL']['NUM_JOINTS'] = num_joints
+
+    if W == 32:
+        cfg['MODEL']['EXTRA']['STAGE2']['NUM_CHANNELS'] = [32, 64]
+        cfg['MODEL']['EXTRA']['STAGE3']['NUM_CHANNELS'] = [32, 64, 128]
+        cfg['MODEL']['EXTRA']['STAGE4']['NUM_CHANNELS'] = [32, 64, 128, 256]
+    elif W == 48:
+        cfg['MODEL']['EXTRA']['STAGE2']['NUM_CHANNELS'] = [48, 96]
+        cfg['MODEL']['EXTRA']['STAGE3']['NUM_CHANNELS'] = [48, 96, 192]
+        cfg['MODEL']['EXTRA']['STAGE4']['NUM_CHANNELS'] = [48, 96, 192, 384]
+
+    model = PoseHighResolutionNet(cfg)
 
     return model

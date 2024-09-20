@@ -1,0 +1,43 @@
+dataset:
+  num_keypoints: 17
+  keypoints:
+    [
+      "C7",
+      "LFHD",
+      "RFHD",
+      "LBHD",
+      "RBHD",
+      "LSHO",
+      "LFIN",
+      "LEJC",
+      "REJC",
+      "LWJC",
+      "RWJC",
+      "RHEE",
+      "RTOE",
+      "LKJC",
+      "RKJC",
+      "LAJC",
+      "RAJC",
+    ]
+  val: "./data/val.csv"
+  train: "./data/train.csv"
+  img_dir: "./data/cropped"
+  sigma: 2.0
+  preprocess:
+    input_size: [192, 256]
+    output_size: [48, 64]
+
+model:
+  name: "HRNet"
+  weights: "weights/pose_hrnet_w32_256x192.pth"
+  num_joints: 17
+  W: 32
+  
+
+training:
+  epochs: 5
+  batch_size: 512
+  optimizer: "adam"
+  learning_rate: 0.001
+  output_dir: "runs/"
