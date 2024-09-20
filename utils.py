@@ -4,6 +4,7 @@ import yaml
 import cv2
 import numpy as np
 import os
+from models.YOLO.yolo import get_keypoints_yolo
 
 
 def load_config(config_path):
@@ -37,7 +38,7 @@ def load_model(config):
             config["W"],
             config["num_joints"],
         )
-        
+
         if config["weights"]:
             model.init_weights(config["weights"])
     elif config["name"] == "ViTPose":
@@ -190,6 +191,13 @@ def visualize_output(image, keypoints, heatmaps):
     cv2.imshow("Visualization", overlayed_image)
     cv2.waitKey(0)  # Wait for a key press to close the window
     cv2.destroyAllWindows()
+
+
+def get_keypoints(output, image_size, outputType="heatmap", scales_sizes=[80, 40, 20]):
+    if outputType == "heatmap":
+        return get_keypoints_from_heatmaps(output, image_size)
+    elif outputType == "yolo":
+        return get_keypoints_yolo(output, scales_sizes, image_size)
 
 
 def get_keypoints_from_heatmaps(heatmaps, image_size):
