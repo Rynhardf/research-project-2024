@@ -81,18 +81,20 @@ class YoloKeypointLoss(nn.Module):
         self.image_size = image_size
 
     def forward(self, output, gt_keypoints, keypoint_visibility):
-        # This is essentially the same as the original function but in class format
+        # Convert output to different scales
         scales = output_to_scales(output)
 
-        # combine keypoint visibility with gt_keypoints
-        gt_keypoints = torch.cat(
+        # Combine keypoint visibility with gt_keypoints
+        gt_keypoints_with_visibility = torch.cat(
             [gt_keypoints, keypoint_visibility.unsqueeze(-1)], dim=2
         )
 
         loss = 0
         for scale, scale_size in zip(scales, self.scale_sizes):
             idx = get_anc_index(
-                gt_keypoints, scale_size=scale_size, input_size=self.image_size
+                gt_keypoints_with_visibility,
+                scale_size=scale_size,
+                input_size=self.image_size,
             )
 
             idx = idx.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, 3, -1)
@@ -101,13 +103,33 @@ class YoloKeypointLoss(nn.Module):
                 -1
             )  # Shape: [batch_size, 17, 3]
 
+            # Compute confidence loss (binary cross-entropy)
             conf_loss = torch.nn.functional.binary_cross_entropy(
-                result[:, :, 2], gt_keypoints[:, :, 2]
+                result[:, :, 2], gt_keypoints_with_visibility[:, :, 2]
             )
 
+            # Mask out invisible keypoints for location loss (MSE)
+            visible_mask = (
+                keypoint_visibility > 0
+            )  # Boolean mask where visible keypoints are True
+            visible_mask = visible_mask.unsqueeze(-1).expand(
+                -1, -1, 2
+            )  # Expand for x, y
+
+            # Apply mask to keypoints and predicted results
+            pred_keypoints = (
+                result[:, :, :2] * visible_mask
+            )  # Only consider visible keypoints
+            gt_keypoints_visible = (
+                gt_keypoints[:, :, :2] * visible_mask
+            )  # Only visible gt keypoints
+
+            # Compute location loss (MSE) only for visible keypoints
             loc_loss = torch.nn.functional.mse_loss(
-                result[:, :, :2], gt_keypoints[:, :, :2]
-            )
+                pred_keypoints, gt_keypoints_visible, reduction="sum"
+            ) / (
+                visible_mask.sum() + 1e-6
+            )  # Normalize by the number of visible keypoints to avoid division by zero
 
             loss += conf_loss + loc_loss
 
