@@ -2,7 +2,7 @@ from ultralytics import YOLO
 import torch
 
 
-def get_yolo_model(variant):
+def get_yolo_model(variant, num_joints=17):
     model = YOLO("./weights/" + variant + ".pt")
 
     return model.model

@@ -55,6 +55,11 @@ def load_model(config):
             if "state_dict" in weights.keys():
                 weights = weights["state_dict"]
             model.init_weights(weights)
+    elif config["name"] == "YOLO":
+        from models.YOLO.yolo import get_yolo_model
+
+        model = get_yolo_model(config["variant"], config["num_joints"])
+
     else:
         raise ValueError(
             f"Model {config['model']['name']} not recognized"
