@@ -1,4 +1,4 @@
-small_17:
+small_17: # same as COCO
   [
     "C7",
     "LFHD",
@@ -18,7 +18,7 @@ small_17:
     "LAJC",
     "RAJC",
   ]
-medium:
+med_34: # Include small + some more points
   [
     "C7",
     "LFHD",
@@ -31,12 +31,29 @@ medium:
     "REJC",
     "LWJC",
     "RWJC",
-    "RHEE",
-    "RTOE",
+    "LHJC",
+    "RHJC",
     "LKJC",
     "RKJC",
     "LAJC",
-    "RAJC",
+    "RAJC", # 17
+    "CLAV",
+    "STRN",
+    "T10",
+    "RHEE",
+    "RTOE",
+    "RFIN",
+    "RWRB",
+    "LASI",
+    "RASI",
+    "LPSI",
+    "LHEE",
+    "LELB",
+    "RUPA",
+    "LWRB",
+    "RWRA",
+    "LTHI",
+    "RTHI",
   ]
 
 all_63:
