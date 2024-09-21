@@ -4,78 +4,20 @@ import pandas as pd
 import numpy as np
 from torch.utils.data import Dataset
 import os
+import yaml
 
-all_keypoints = [
-    "C7",
-    "CLAV",
-    "CentreOfMass",
-    "CentreOfMassFloor",
-    "LAJC",
-    "LANK",
-    "LASI",
-    "LBHD",
-    "LEJC",
-    "LELB",
-    "LFHD",
-    "LFIN",
-    "LFRM",
-    "LHEE",
-    "LHJC",
-    "LKJC",
-    "LKNE",
-    "LMMED",
-    "LPSI",
-    "LSHO",
-    "LSJC",
-    "LTHI",
-    "LTIB",
-    "LTOE",
-    "LUPA",
-    "LWJC",
-    "LWRA",
-    "LWRB",
-    "L_Foot_Out",
-    "MElbowL",
-    "MElbowR",
-    "MKNEL",
-    "MKNER",
-    "PelL",
-    "PelR",
-    "RAJC",
-    "RANK",
-    "RASI",
-    "RBAK",
-    "RBHD",
-    "REJC",
-    "RELB",
-    "RFHD",
-    "RFIN",
-    "RFRM",
-    "RHEE",
-    "RHJC",
-    "RKJC",
-    "RKNE",
-    "RMMED",
-    "RPSI",
-    "RSHO",
-    "RSJC",
-    "RTHI",
-    "RTIB",
-    "RTOE",
-    "RUPA",
-    "RWJC",
-    "RWRA",
-    "RWRB",
-    "R_Foot_Out",
-    "STRN",
-    "T10",
-]
+
+keypoint_set_config = "./configs/keypoint_sets.yaml"
+with open(keypoint_set_config, "r") as file:
+    keypoint_sets = yaml.safe_load(file)
+
+all_keypoints = keypoint_sets["all_63"]
 
 
 class PoseDataset(Dataset):
     def __init__(self, config, file):
         self.img_dir = config["img_dir"]
-        self.keypoints = config["keypoints"]
+        self.keypoints = keypoint_sets[config["keypoints"]]
         self.image_size = config["preprocess"]["input_size"]
         self.output_size = config["preprocess"]["output_size"]
         self.sigma = config["sigma"]

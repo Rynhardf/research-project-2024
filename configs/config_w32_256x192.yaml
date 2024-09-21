@@ -1,25 +1,5 @@
 dataset:
-  num_keypoints: 17
-  keypoints:
-    [
-      "C7",
-      "LFHD",
-      "RFHD",
-      "LBHD",
-      "RBHD",
-      "LSHO",
-      "LFIN",
-      "LEJC",
-      "REJC",
-      "LWJC",
-      "RWJC",
-      "RHEE",
-      "RTOE",
-      "LKJC",
-      "RKJC",
-      "LAJC",
-      "RAJC",
-    ]
+  keypoints: "all_63"
   val: "./data/val.csv"
   train: "./data/train.csv"
   img_dir: "./data/cropped"
@@ -33,7 +13,6 @@ model:
   weights: "weights/pose_hrnet_w32_256x192.pth"
   num_joints: 17
   W: 32
-  
 
 training:
   epochs: 5
