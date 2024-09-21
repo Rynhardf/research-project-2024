@@ -1,5 +1,5 @@
 dataset:
-  keypoints: "small_17"
+  keypoints: "med_34"
   val: "./data/val.csv"
   train: "./data/train.csv"
   img_dir: "./data/cropped"
@@ -13,7 +13,7 @@ model:
   weights: "weights/vitpose-b-classic.pth"
   input_size: [192, 256]
   output_size: [48, 64]
-  num_joints: 17
+  num_joints: 34
   variant: "B"
   decoder: "classic"
 
