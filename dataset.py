@@ -177,7 +177,8 @@ class PoseDataset(Dataset):
         for i in range(0, len(keypoints_str), 2):
             x = keypoints_str.iloc[i]
             y = keypoints_str.iloc[i + 1]
-            if x == "" or y == "":
+
+            if np.isnan(x) or np.isnan(y):
                 keypoints.extend([0, 0, 0])
                 continue
             x = float(x)
