@@ -516,12 +516,21 @@ class PoseHighResolutionNet(nn.Module):
                     name.split(".")[0] in self.pretrained_layers
                     or self.pretrained_layers[0] == "*"
                 ):
-                    if "final_layer" in name and self.num_joints != 17:
-                        logger.info(
-                            f"Skipping loading weights for {name} due to different number of joints"
-                        )
-                        continue
+                    if "final_layer" in name:
+                        try:
+                            # Try to load the final layer
+                            self.load_state_dict({name: m}, strict=False)
+                            logger.info(f"=> Successfully loaded {name}")
+                        except RuntimeError as e:
+                            # Skip if there is a mismatch in dimensions
+                            logger.warning(
+                                f"Skipping {name} due to shape mismatch: {e}"
+                            )
+                        continue  # Skip adding final_layer to need_init_state_dict if it's handled separately
+                    # For all other layers
                     need_init_state_dict[name] = m
+
+            # Load the remaining state dict
             self.load_state_dict(need_init_state_dict, strict=False)
         elif pretrained:
             logger.error("=> please download pre-trained models first!")
@@ -536,6 +545,7 @@ def get_pose_net(cfg, is_train, **kwargs):
 
     return model
 
+
 default_cfg = {
     "MODEL": {
         "NUM_JOINTS": 17,
@@ -548,7 +558,7 @@ default_cfg = {
                 "NUM_BLOCKS": [4, 4],
                 "NUM_CHANNELS": [32, 64],
                 "BLOCK": "BASIC",
-                "FUSE_METHOD": "SUM"
+                "FUSE_METHOD": "SUM",
             },
             "STAGE3": {
                 "NUM_MODULES": 4,
@@ -556,7 +566,7 @@ default_cfg = {
                 "NUM_BLOCKS": [4, 4, 4],
                 "NUM_CHANNELS": [32, 64, 128],
                 "BLOCK": "BASIC",
-                "FUSE_METHOD": "SUM"
+                "FUSE_METHOD": "SUM",
             },
             "STAGE4": {
                 "NUM_MODULES": 3,
@@ -564,26 +574,26 @@ default_cfg = {
                 "NUM_BLOCKS": [4, 4, 4, 4],
                 "NUM_CHANNELS": [32, 64, 128, 256],
                 "BLOCK": "BASIC",
-                "FUSE_METHOD": "SUM"
-            }
-        }
+                "FUSE_METHOD": "SUM",
+            },
+        },
     }
 }
 
 
-def get_pose_model(W,num_joints):
+def get_pose_model(W, num_joints):
     cfg = default_cfg
 
-    cfg['MODEL']['NUM_JOINTS'] = num_joints
+    cfg["MODEL"]["NUM_JOINTS"] = num_joints
 
     if W == 32:
-        cfg['MODEL']['EXTRA']['STAGE2']['NUM_CHANNELS'] = [32, 64]
-        cfg['MODEL']['EXTRA']['STAGE3']['NUM_CHANNELS'] = [32, 64, 128]
-        cfg['MODEL']['EXTRA']['STAGE4']['NUM_CHANNELS'] = [32, 64, 128, 256]
+        cfg["MODEL"]["EXTRA"]["STAGE2"]["NUM_CHANNELS"] = [32, 64]
+        cfg["MODEL"]["EXTRA"]["STAGE3"]["NUM_CHANNELS"] = [32, 64, 128]
+        cfg["MODEL"]["EXTRA"]["STAGE4"]["NUM_CHANNELS"] = [32, 64, 128, 256]
     elif W == 48:
-        cfg['MODEL']['EXTRA']['STAGE2']['NUM_CHANNELS'] = [48, 96]
-        cfg['MODEL']['EXTRA']['STAGE3']['NUM_CHANNELS'] = [48, 96, 192]
-        cfg['MODEL']['EXTRA']['STAGE4']['NUM_CHANNELS'] = [48, 96, 192, 384]
+        cfg["MODEL"]["EXTRA"]["STAGE2"]["NUM_CHANNELS"] = [48, 96]
+        cfg["MODEL"]["EXTRA"]["STAGE3"]["NUM_CHANNELS"] = [48, 96, 192]
+        cfg["MODEL"]["EXTRA"]["STAGE4"]["NUM_CHANNELS"] = [48, 96, 192, 384]
 
     model = PoseHighResolutionNet(cfg)
 
