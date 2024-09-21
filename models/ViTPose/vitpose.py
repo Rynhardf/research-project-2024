@@ -62,10 +62,34 @@ class ViTPose(nn.Module):
             weights["backbone.norm.bias"] = weights["backbone.last_norm.bias"]
             del weights["backbone.last_norm.weight"]
             del weights["backbone.last_norm.bias"]
-        # load and check if success
+        # Load weights with strict=False to allow missing keys
         r = self.load_state_dict(weights, strict=False)
         if r.missing_keys:
             print("Missing keys: ", r.missing_keys)
+            # Initialize missing parameters
+            for key in r.missing_keys:
+                module = self
+                attrs = key.split(".")
+                for attr_name in attrs[:-1]:
+                    module = getattr(module, attr_name)
+                param_name = attrs[-1]
+                if hasattr(module, param_name):
+                    param = getattr(module, param_name)
+                    if isinstance(param, nn.Parameter):
+                        # Initialize weights and biases appropriately
+                        if isinstance(module, nn.Conv2d):
+                            if param_name == "weight":
+                                nn.init.normal_(param, std=0.001)
+                            elif param_name == "bias":
+                                nn.init.constant_(param, 0)
+                        elif isinstance(module, nn.Linear):
+                            if param_name == "weight":
+                                nn.init.normal_(param, std=0.001)
+                            elif param_name == "bias":
+                                nn.init.constant_(param, 0)
+                        else:
+                            # Initialize other layer types if needed
+                            pass
 
 
 vit_models = {
