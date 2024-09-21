@@ -93,49 +93,17 @@ class JointsMSELoss(nn.Module):
 
 
 # Function to draw keypoints on an image
-def draw_keypoints(image_path, keypoints, box, C, S, A, D, frame_num):
-    # Load the image
-    image = cv2.imread(os.path.join(root_path, image_path))
-
-    if box is None:
-        box = (0, 0, image.shape[1], image.shape[0])
-
-    if image is None:
-        print(f"Error loading image: {image_path}")
-        return
-
-    # Iterate through keypoints in pairs (x, y)
-    for i in range(0, len(keypoints), 2):
-        x = keypoints[i]
-        y = keypoints[i + 1]
-
-        # Only draw if x and y are not NaN
-        if not np.isnan(x) and not np.isnan(y):
-            # Draw a circle for each keypoint
+def draw_keypoints(image, keypoints, keypoint_visibility, color=(0, 255, 0), text=""):
+    image_show = image.copy()
+    for j in range(keypoints.shape[0]):
+        if keypoint_visibility[j] == 1:
             cv2.circle(
-                image, (int(x), int(y)), radius=5, color=(0, 255, 0), thickness=-1
+                image_show, (int(keypoints[j][0]), int(keypoints[j][1])), 2, color, -1
             )
-
-    # Put the text for CSAD and frame_num on the image
-    text = f"C: {C}, S: {S}, A: {A}, D: {D}, Frame: {frame_num}"
-
     cv2.putText(
-        image, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA
+        image_show, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2, cv2.LINE_AA
     )
-
-    # Draw the bounding box
-    x, y, w, h = box
-    x, y, w, h = int(x), int(y), int(w), int(h)
-    cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
-
-    # resize the image to half
-    image = cv2.resize(image, (0, 0), fx=0.5, fy=0.5)
-
-    cv2.imshow("Keypoints", image)
-    key = cv2.waitKey(0)
-    if key == 27:  # ESC
-        cv2.destroyAllWindows()
-        exit()
+    return image_show
 
 
 def visualize_output(image, keypoints, heatmaps):
@@ -202,7 +170,8 @@ def get_keypoints(output, image_size, outputType="heatmap", scales_sizes=[80, 40
 
 def get_keypoints_from_heatmaps(heatmaps, image_size):
     """
-    Convert predicted heatmaps to keypoint coordinates using PyTorch.
+    Convert predicted heatmaps to keypoint coordinates using PyTorch, adding a quarter of the distance
+    to the next highest value to refine the keypoint location.
 
     Args:
     - heatmaps (torch.Tensor): Heatmaps of shape (batch_size, num_keypoints, heatmap_height, heatmap_width)
@@ -223,21 +192,39 @@ def get_keypoints_from_heatmaps(heatmaps, image_size):
     heatmaps_reshaped = heatmaps.reshape(
         batch_size, num_keypoints, -1
     )  # Flatten height and width into one dimension
-    max_vals, max_indices = torch.max(
-        heatmaps_reshaped, dim=-1
-    )  # Find max value and corresponding index in flattened heatmap
+
+    # Find max value and corresponding index in flattened heatmap
+    max_vals, max_indices = torch.max(heatmaps_reshaped, dim=-1)
+
+    # Zero out the maximum value positions in the heatmap to find the second max
+    heatmaps_reshaped_clone = heatmaps_reshaped.clone()
+    heatmaps_reshaped_clone.scatter_(-1, max_indices.unsqueeze(-1), -float("inf"))
+
+    # Find second maximum values and indices
+    second_max_vals, second_max_indices = torch.max(heatmaps_reshaped_clone, dim=-1)
 
     # Convert the 1D indices back to 2D coordinates
     max_indices_x = max_indices % heatmap_width
     max_indices_y = max_indices // heatmap_width
 
+    second_max_indices_x = second_max_indices % heatmap_width
+    second_max_indices_y = second_max_indices // heatmap_width
+
+    # Compute the quarter-distance shift
+    delta_x = (second_max_indices_x.float() - max_indices_x.float()) * 0.25
+    delta_y = (second_max_indices_y.float() - max_indices_y.float()) * 0.25
+
+    # Refine the coordinates by adding the quarter distance
+    refined_max_indices_x = max_indices_x.float() + delta_x
+    refined_max_indices_y = max_indices_y.float() + delta_y
+
     # Scale the coordinates to match the original image size
-    max_indices_x = (max_indices_x.float() / heatmap_width) * img_width
-    max_indices_y = (max_indices_y.float() / heatmap_height) * img_height
+    refined_max_indices_x = (refined_max_indices_x / heatmap_width) * img_width
+    refined_max_indices_y = (refined_max_indices_y / heatmap_height) * img_height
 
     # Stack the x and y coordinates
     keypoints = torch.stack(
-        [max_indices_x, max_indices_y], dim=-1
+        [refined_max_indices_x, refined_max_indices_y], dim=-1
     )  # Shape: (batch_size, num_keypoints, 2)
 
     return keypoints

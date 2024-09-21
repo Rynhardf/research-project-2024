@@ -3,16 +3,21 @@ dataset:
   val: "./data/val.csv"
   train: "./data/train.csv"
   img_dir: "./data/cropped"
-  sigma: 2.0
+  sigma: 3.0
   preprocess:
     input_size: [192, 256]
     output_size: [48, 64]
 
 model:
-  name: "HRNet"
-  weights: "weights/pose_hrnet_w32_256x192.pth"
+  name: "ViTPose"
+  weights: "weights/vitpose-l-simple.pth"
+  input_size: [192, 256]
+  output_size: [48, 64]
   num_joints: 17
-  W: 32
+  variant: "L"
+  decoder: "simple"
+  freeze:
+    backbone: True
 
 training:
   epochs: 5
