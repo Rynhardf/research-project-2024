@@ -11,6 +11,26 @@ small_17:
     "REJC",
     "LWJC",
     "RWJC",
+    "LHJC",
+    "RHJC",
+    "LKJC",
+    "RKJC",
+    "LAJC",
+    "RAJC",
+  ]
+medium:
+  [
+    "C7",
+    "LFHD",
+    "RFHD",
+    "LBHD",
+    "RBHD",
+    "LSJC",
+    "RSJC",
+    "LEJC",
+    "REJC",
+    "LWJC",
+    "RWJC",
     "RHEE",
     "RTOE",
     "LKJC",
@@ -18,7 +38,6 @@ small_17:
     "LAJC",
     "RAJC",
   ]
-medium:
 
 all_63:
   [
