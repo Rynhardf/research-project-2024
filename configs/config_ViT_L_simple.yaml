@@ -1,25 +1,5 @@
 dataset:
-  num_keypoints: 17
-  keypoints:
-    [
-      "C7",
-      "LFHD",
-      "RFHD",
-      "LBHD",
-      "RBHD",
-      "LSHO",
-      "LFIN",
-      "LEJC",
-      "REJC",
-      "LWJC",
-      "RWJC",
-      "RHEE",
-      "RTOE",
-      "LKJC",
-      "RKJC",
-      "LAJC",
-      "RAJC",
-    ]
+  keypoints: "small_17"
   val: "./data/val.csv"
   train: "./data/train.csv"
   img_dir: "./data/cropped"

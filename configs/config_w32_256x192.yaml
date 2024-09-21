@@ -1,5 +1,5 @@
 dataset:
-  keypoints: "all_63"
+  keypoints: "small_17"
   val: "./data/val.csv"
   train: "./data/train.csv"
   img_dir: "./data/cropped"
