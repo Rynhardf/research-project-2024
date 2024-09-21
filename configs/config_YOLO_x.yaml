@@ -12,6 +12,7 @@ model:
   name: "YOLO"
   variant: "yolov8x-pose"
   num_joints: 17
+  scale_sizes: [80, 40, 20]
 
 training:
   epochs: 5

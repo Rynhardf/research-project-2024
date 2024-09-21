@@ -1,5 +1,6 @@
 from ultralytics import YOLO
 import torch
+import torch.nn as nn
 
 
 def get_yolo_model(variant, num_joints=17):
@@ -73,39 +74,44 @@ def get_anc_index(gt_keypoints, scale_size=80, input_size=(640, 640)):
     return idx.to(torch.int64)
 
 
-def loss_yolo(
-    output,
-    gt_keypoints,
-    keypoint_visibility,
-    scale_sizes=[80, 40, 20],
-    image_size=(640, 640),
-):
-    scales = output_to_scales(output)
+class YoloKeypointLoss(nn.Module):
+    def __init__(self, scale_sizes=[80, 40, 20], image_size=(640, 640)):
+        super(YoloKeypointLoss, self).__init__()
+        self.scale_sizes = scale_sizes
+        self.image_size = image_size
 
-    # combine keypoint visibility with gt_keypoints
-    gt_keypoints = torch.cat([gt_keypoints, keypoint_visibility.unsqueeze(-1)], dim=2)
+    def forward(self, output, gt_keypoints, keypoint_visibility):
+        # This is essentially the same as the original function but in class format
+        scales = output_to_scales(output)
 
-    loss = 0
-    for scale, scale_size in zip(scales, scale_sizes):
-        idx = get_anc_index(gt_keypoints, scale_size=scale_size, input_size=image_size)
-
-        idx = idx.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, 3, -1)
-
-        result = torch.gather(scale, dim=3, index=idx).squeeze(
-            -1
-        )  # Shape: [batch_size, 17, 3]
-
-        conf_loss = torch.nn.functional.binary_cross_entropy(
-            result[:, :, 2], gt_keypoints[:, :, 2]
+        # combine keypoint visibility with gt_keypoints
+        gt_keypoints = torch.cat(
+            [gt_keypoints, keypoint_visibility.unsqueeze(-1)], dim=2
         )
 
-        loc_loss = torch.nn.functional.mse_loss(
-            result[:, :, :2], gt_keypoints[:, :, :2]
-        )
+        loss = 0
+        for scale, scale_size in zip(scales, self.scale_sizes):
+            idx = get_anc_index(
+                gt_keypoints, scale_size=scale_size, input_size=self.image_size
+            )
 
-        loss += conf_loss + loc_loss
+            idx = idx.unsqueeze(-1).unsqueeze(-1).expand(-1, -1, 3, -1)
 
-    return loss
+            result = torch.gather(scale, dim=3, index=idx).squeeze(
+                -1
+            )  # Shape: [batch_size, 17, 3]
+
+            conf_loss = torch.nn.functional.binary_cross_entropy(
+                result[:, :, 2], gt_keypoints[:, :, 2]
+            )
+
+            loc_loss = torch.nn.functional.mse_loss(
+                result[:, :, :2], gt_keypoints[:, :, :2]
+            )
+
+            loss += conf_loss + loc_loss
+
+        return loss
 
 
 def get_keypoints_yolo(output, scale_sizes=[80, 40, 20], image_size=(640, 640)):

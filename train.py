@@ -12,6 +12,7 @@ import json
 from utils import JointsMSELoss, load_config, save_config, load_model
 from utils import get_keypoints_from_heatmaps, normalized_mae_in_pixels
 import argparse
+from models.YOLO.yolo import YoloKeypointLoss
 
 
 def get_optimizer(config, model):
@@ -71,6 +72,9 @@ def validate(model, val_loader, criterion, device, input_size):
     return val_loss, norm_mae
 
 
+losses = {"HRNET": JointsMSELoss, "ViTPose": JointsMSELoss, "YOLO": YoloKeypointLoss}
+
+
 def train_model(config):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     input_size = config["dataset"]["preprocess"]["input_size"]
@@ -82,12 +86,16 @@ def train_model(config):
 
     # Data loaders
     batch_size = config["training"]["batch_size"]
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=8)
+    train_loader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True, num_workers=8
+    )
+    val_loader = DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=False, num_workers=8
+    )
 
     model = load_model(config["model"]).to(device)
     optimizer = get_optimizer(config, model)
-    criterion = JointsMSELoss()
+    criterion = losses[config["model"]["name"]]()
 
     # Create a timestamped output directory
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")  # Generate timestamp
@@ -103,11 +111,9 @@ def train_model(config):
 
     # To log results
     results = {"epochs": []}
-    
+
     # do one validation run before starting the training
-    val_loss, norm_mae = validate(
-        model, val_loader, criterion, device, input_size
-    )
+    val_loss, norm_mae = validate(model, val_loader, criterion, device, input_size)
 
     print(
         f"Epoch [0/{num_epochs}],"
@@ -163,9 +169,7 @@ def train_model(config):
 
         epoch_time = time.time() - epoch_start_time  # Total time for the epoch
 
-        val_loss, norm_mae = validate(
-            model, val_loader, criterion, device, input_size
-        )
+        val_loss, norm_mae = validate(model, val_loader, criterion, device, input_size)
 
         print(
             f"Epoch [{epoch + 1}/{num_epochs}], Training Loss: {avg_train_loss:.6f}, "
