@@ -139,7 +139,7 @@ class YoloKeypointLoss(nn.Module):
             )  # Shape: [batch_size, 17, 3]
 
             # Compute confidence loss (binary cross-entropy)
-            conf_loss = torch.nn.functional.binary_cross_entropy_with_logits(
+            conf_loss = torch.nn.functional.binary_cross_entropy(
                 result[:, :, 2], gt_keypoints_with_visibility[:, :, 2]
             )
 
