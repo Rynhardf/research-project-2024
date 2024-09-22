@@ -12,7 +12,7 @@ import json
 from utils import JointsMSELoss, load_config, save_config, load_model
 from utils import get_keypoints_from_heatmaps, normalized_mae_in_pixels
 import argparse
-from models.YOLO.yolo import YoloKeypointLoss
+from models.YOLO.yolo import YoloKeypointLoss, get_keypoints_yolo
 
 
 def get_optimizer(config, model):
@@ -59,16 +59,19 @@ def validate(model, val_loader, criterion, device, input_size, config):
 
             if config["model"]["name"] == "YOLO":
                 pred_keypoints = get_keypoints_yolo(
-                    outputs.detach(),
+                    outputs[0].detach(),
                     scale_sizes=config.get("scale_sizes", [80, 40, 20]),
                     image_size=config["dataset"]["preprocess"]["input_size"],
-                )
+                )[:, :, :2]
             else:
                 pred_keypoints = get_keypoints_from_heatmaps(
                     outputs.detach(), input_size[::-1]
                 )
 
-            loss = criterion(outputs, targets, keypoint_visibility)
+            if config["model"]["name"] == "YOLO":
+                loss = criterion(outputs[0], gt_keypoints, keypoint_visibility)
+            else:
+                loss = criterion(outputs, targets, keypoint_visibility)
             val_loss += loss.item()
 
             norm_mae += normalized_mae_in_pixels(
@@ -169,7 +172,11 @@ def train_model(config):
                     outputs.detach(), input_size[::-1]
                 )
 
-            loss = criterion(outputs, targets, keypoint_visibility)
+            if config["model"]["name"] == "YOLO":
+                loss = criterion(outputs[0], gt_keypoints, keypoint_visibility)
+            else:
+                loss = criterion(outputs, targets, keypoint_visibility)
+
             loss.backward()
             optimizer.step()
 
