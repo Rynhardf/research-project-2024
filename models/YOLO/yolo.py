@@ -16,9 +16,26 @@ class YOLOModel(nn.Module):
         out = self.model(x)
 
         if self.model.training:
-            return out[1]
+            result = out[1]
         else:
-            return out[0][:, 5:, :]
+            result = out[1][1]
+
+        result = self.model.model[22].kpts_decode(x[0], result)
+
+        return result
+
+    # def kpts_decode(self, bs, kpts):
+    #     """Decodes keypoints."""
+    #     ndim = 3
+
+    #     y = kpts.clone()
+    #     if ndim == 3:
+    #         y[:, 2::3] = y[
+    #             :, 2::3
+    #         ].sigmoid()  # sigmoid (WARNING: inplace .sigmoid_() Apple MPS bug)
+    #     y[:, 0::ndim] = (y[:, 0::ndim] * 2.0 + (self.anchors[0] - 0.5)) * self.strides
+    #     y[:, 1::ndim] = (y[:, 1::ndim] * 2.0 + (self.anchors[1] - 0.5)) * self.strides
+    #     return y
 
 
 def get_yolo_model(variant, num_joints=17):
