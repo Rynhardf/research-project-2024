@@ -46,7 +46,7 @@ def save_checkpoint(checkpoint_dir, epoch, results, weights):
     print(f"Checkpoint saved to {checkpoint_dir}")
 
 
-def validate(model, val_loader, criterion, device, input_size):
+def validate(model, val_loader, criterion, device, input_size, config):
     model.eval()
     val_loss = 0
     norm_mae = 0
@@ -56,9 +56,18 @@ def validate(model, val_loader, criterion, device, input_size):
             gt_keypoints = gt_keypoints.to(device)
             keypoint_visibility = keypoint_visibility.to(device)
             outputs = model(images)
-            pred_keypoints = get_keypoints_from_heatmaps(
-                outputs.detach(), input_size[::-1]
-            )
+
+            if config["model"]["name"] == "YOLO":
+                pred_keypoints = get_keypoints_yolo(
+                    outputs.detach(),
+                    scale_sizes=config.get("scale_sizes", [80, 40, 20]),
+                    image_size=config["dataset"]["preprocess"]["input_size"],
+                )
+            else:
+                pred_keypoints = get_keypoints_from_heatmaps(
+                    outputs.detach(), input_size[::-1]
+                )
+
             loss = criterion(outputs, targets, keypoint_visibility)
             val_loss += loss.item()
 
@@ -68,11 +77,12 @@ def validate(model, val_loader, criterion, device, input_size):
 
     val_loss /= len(val_loader)
     norm_mae /= len(val_loader)
-    model.train()  # Set model back to training mode
+    model.train()  # Set model
+
     return val_loss, norm_mae
 
 
-losses = {"HRNET": JointsMSELoss, "ViTPose": JointsMSELoss, "YOLO": YoloKeypointLoss}
+losses = {"HRNet": JointsMSELoss, "ViTPose": JointsMSELoss, "YOLO": YoloKeypointLoss}
 
 
 def train_model(config):
@@ -113,7 +123,9 @@ def train_model(config):
     results = {"epochs": []}
 
     # do one validation run before starting the training
-    val_loss, norm_mae = validate(model, val_loader, criterion, device, input_size)
+    val_loss, norm_mae = validate(
+        model, val_loader, criterion, device, input_size, config
+    )
 
     print(
         f"Epoch [0/{num_epochs}],"
@@ -146,9 +158,16 @@ def train_model(config):
             optimizer.zero_grad()
             outputs = model(images)
 
-            pred_keypoints = get_keypoints_from_heatmaps(
-                outputs.detach(), input_size[::-1]
-            )
+            if config["model"]["name"] == "YOLO":
+                pred_keypoints = get_keypoints_yolo(
+                    outputs.detach(),
+                    scale_sizes=config.get("scale_sizes", [80, 40, 20]),
+                    image_size=config["dataset"]["preprocess"]["input_size"],
+                )
+            else:
+                pred_keypoints = get_keypoints_from_heatmaps(
+                    outputs.detach(), input_size[::-1]
+                )
 
             loss = criterion(outputs, targets, keypoint_visibility)
             loss.backward()
@@ -169,7 +188,9 @@ def train_model(config):
 
         epoch_time = time.time() - epoch_start_time  # Total time for the epoch
 
-        val_loss, norm_mae = validate(model, val_loader, criterion, device, input_size)
+        val_loss, norm_mae = validate(
+            model, val_loader, criterion, device, input_size, config
+        )
 
         print(
             f"Epoch [{epoch + 1}/{num_epochs}], Training Loss: {avg_train_loss:.6f}, "
