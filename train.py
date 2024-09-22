@@ -10,7 +10,7 @@ import time
 from datetime import datetime
 import json
 from utils import JointsMSELoss, load_config, save_config, load_model
-from utils import get_keypoints_from_heatmaps, normalized_mae_in_pixels
+from utils import get_keypoints, normalized_mae_in_pixels
 import argparse
 from models.YOLO.yolo import YoloKeypointLoss, get_keypoints_yolo
 
@@ -56,22 +56,11 @@ def validate(model, val_loader, criterion, device, input_size, config):
             gt_keypoints = gt_keypoints.to(device)
             keypoint_visibility = keypoint_visibility.to(device)
             outputs = model(images)
+            print(outputs.shape)  # torch.Size([1, 56, 8400]) as expected
 
-            if config["model"]["name"] == "YOLO":
-                pred_keypoints = get_keypoints_yolo(
-                    outputs[0].detach(),
-                    scale_sizes=config.get("scale_sizes", [80, 40, 20]),
-                    image_size=config["dataset"]["preprocess"]["input_size"],
-                )[:, :, :2]
-            else:
-                pred_keypoints = get_keypoints_from_heatmaps(
-                    outputs.detach(), input_size[::-1]
-                )
+            pred_keypoints = get_keypoints(outputs, config)
 
-            if config["model"]["name"] == "YOLO":
-                loss = criterion(outputs[0], gt_keypoints, keypoint_visibility)
-            else:
-                loss = criterion(outputs, targets, keypoint_visibility)
+            loss = criterion(outputs, targets, gt_keypoints, keypoint_visibility)
             val_loss += loss.item()
 
             norm_mae += normalized_mae_in_pixels(
@@ -160,22 +149,13 @@ def train_model(config):
 
             optimizer.zero_grad()
             outputs = model(images)
+            print(
+                outputs.shape
+            )  # Some list of tensors - should be torch.Size([1, 56, 8400])
 
-            if config["model"]["name"] == "YOLO":
-                pred_keypoints = get_keypoints_yolo(
-                    outputs.detach(),
-                    scale_sizes=config.get("scale_sizes", [80, 40, 20]),
-                    image_size=config["dataset"]["preprocess"]["input_size"],
-                )
-            else:
-                pred_keypoints = get_keypoints_from_heatmaps(
-                    outputs.detach(), input_size[::-1]
-                )
+            pred_keypoints = get_keypoints(outputs.detach(), config)
 
-            if config["model"]["name"] == "YOLO":
-                loss = criterion(outputs[0], gt_keypoints, keypoint_visibility)
-            else:
-                loss = criterion(outputs, targets, keypoint_visibility)
+            loss = criterion(outputs, targets, gt_keypoints, keypoint_visibility)
 
             loss.backward()
             optimizer.step()

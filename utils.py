@@ -76,7 +76,7 @@ class JointsMSELoss(nn.Module):
         super(JointsMSELoss, self).__init__()
         self.criterion = nn.MSELoss(reduction="mean")
 
-    def forward(self, output, target, keypoint_visibility):
+    def forward(self, output, target, gt_keypoints, keypoint_visibility):
         batch_size = output.size(0)
         num_joints = output.size(1)
         heatmaps_pred = output.reshape((batch_size, num_joints, -1))
@@ -166,11 +166,13 @@ def visualize_output(image, keypoints, heatmaps):
     cv2.destroyAllWindows()
 
 
-def get_keypoints(output, image_size, outputType="heatmap", scales_sizes=[80, 40, 20]):
-    if outputType == "heatmap":
-        return get_keypoints_from_heatmaps(output, image_size)
-    elif outputType == "yolo":
+def get_keypoints(output, config):
+    image_size = config["dataset"]["preprocess"]["input_size"]
+    if config["model"]["name"] == "YOLO":
+        scales_sizes = config.get("scale_sizes", [80, 40, 20])
         return get_keypoints_yolo(output, scales_sizes, image_size)
+    else:
+        return get_keypoints_from_heatmaps(output, image_size)
 
 
 def get_keypoints_from_heatmaps(heatmaps, image_size):
@@ -191,7 +193,7 @@ def get_keypoints_from_heatmaps(heatmaps, image_size):
         raise TypeError("Heatmaps should be a torch.Tensor")
 
     batch_size, num_keypoints, heatmap_height, heatmap_width = heatmaps.shape
-    img_height, img_width = image_size
+    img_width, img_height = image_size
 
     # Flatten the heatmap to find the maximum value positions
     heatmaps_reshaped = heatmaps.reshape(

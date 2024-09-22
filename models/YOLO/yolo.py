@@ -3,10 +3,19 @@ import torch
 import torch.nn as nn
 
 
-def get_yolo_model(variant, num_joints=17):
-    model = YOLO("./weights/" + variant + ".pt")
+class YOLOModel(nn.Module):
+    def __init__(self, variant):
+        super(YOLOModel, self).__init__()
+        self.model = YOLO("./weights/" + variant + ".pt").model
 
-    return model.model
+    def forward(self, x):
+        return self.model(x)
+
+
+def get_yolo_model(variant, num_joints=17):
+    model = YOLOModel(variant)
+
+    return model
 
 
 def output_to_scales(output, scales_sizes=[80, 40, 20]):
@@ -80,7 +89,7 @@ class YoloKeypointLoss(nn.Module):
         self.scale_sizes = scale_sizes
         self.image_size = image_size
 
-    def forward(self, output, gt_keypoints, keypoint_visibility):
+    def forward(self, output, target, gt_keypoints, keypoint_visibility):
         # Convert output to different scales
         scales = output_to_scales(output)
 
@@ -137,7 +146,7 @@ class YoloKeypointLoss(nn.Module):
 
 
 def get_keypoints_yolo(output, scale_sizes=[80, 40, 20], image_size=(640, 640)):
-    scales = output_to_scales(output, scale_sizes)
+    scales = output_to_scales(output.detach().clone(), scale_sizes)
 
     keypoints = []
     for scale, scale_size in zip(scales, scale_sizes):
@@ -159,5 +168,8 @@ def get_keypoints_yolo(output, scale_sizes=[80, 40, 20], image_size=(640, 640)):
     for i in range(keypoints.shape[0]):
         for j in range(keypoints.shape[2]):
             best_keypoints[i, j] = keypoints[i, max_conf_idx[i, j], j]
+
+    confidences = best_keypoints[:, :, 2]
+    best_keypoints = best_keypoints[:, :, :2]
 
     return best_keypoints
