@@ -56,7 +56,6 @@ def validate(model, val_loader, criterion, device, input_size, config):
             gt_keypoints = gt_keypoints.to(device)
             keypoint_visibility = keypoint_visibility.to(device)
             outputs = model(images)
-            print(outputs.shape)  # torch.Size([1, 56, 8400]) as expected
 
             pred_keypoints = get_keypoints(outputs, config)
 
@@ -149,11 +148,6 @@ def train_model(config):
 
             optimizer.zero_grad()
             outputs = model(images)
-            print(
-                outputs.shape
-            )  # Some list of tensors - should be torch.Size([1, 56, 8400])
-
-            pred_keypoints = get_keypoints(outputs.detach(), config)
 
             loss = criterion(outputs, targets, gt_keypoints, keypoint_visibility)
 

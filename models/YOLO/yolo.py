@@ -8,8 +8,17 @@ class YOLOModel(nn.Module):
         super(YOLOModel, self).__init__()
         self.model = YOLO("./weights/" + variant + ".pt").model
 
+        # unfreeze all layers
+        for param in self.model.parameters():
+            param.requires_grad = True
+
     def forward(self, x):
-        return self.model(x)
+        out = self.model(x)
+
+        if self.model.training:
+            return out[1]
+        else:
+            return out[0][:, 5:, :]
 
 
 def get_yolo_model(variant, num_joints=17):
@@ -21,7 +30,7 @@ def get_yolo_model(variant, num_joints=17):
 def output_to_scales(output, scales_sizes=[80, 40, 20]):
     # output is a (bs, 56, number of anchors)
 
-    reshaped_output = output[:, 5:, :].reshape(output.shape[0], 17, 3, -1)
+    reshaped_output = output.reshape(output.shape[0], 17, 3, -1)
 
     scale_output = [
         reshaped_output[:, :, :, : scales_sizes[0] ** 2],
@@ -113,7 +122,7 @@ class YoloKeypointLoss(nn.Module):
             )  # Shape: [batch_size, 17, 3]
 
             # Compute confidence loss (binary cross-entropy)
-            conf_loss = torch.nn.functional.binary_cross_entropy(
+            conf_loss = torch.nn.functional.binary_cross_entropy_with_logits(
                 result[:, :, 2], gt_keypoints_with_visibility[:, :, 2]
             )
 
@@ -146,7 +155,7 @@ class YoloKeypointLoss(nn.Module):
 
 
 def get_keypoints_yolo(output, scale_sizes=[80, 40, 20], image_size=(640, 640)):
-    scales = output_to_scales(output.detach().clone(), scale_sizes)
+    scales = output_to_scales(output.clone().detach(), scale_sizes)
 
     keypoints = []
     for scale, scale_size in zip(scales, scale_sizes):
