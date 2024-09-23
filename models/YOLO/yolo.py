@@ -302,7 +302,7 @@ def get_keypoints_yolo(output):
     y_values = torch.gather(y_values, 2, idx.unsqueeze(2))
     conf = torch.gather(conf, 2, idx.unsqueeze(2))
 
-    keypoints = torch.cat((x_values, y_values, conf), dim=2)
+    keypoints = torch.cat((x_values, y_values), dim=2)
 
     return keypoints
 
@@ -337,7 +337,7 @@ def get_yolo_model(variant, num_joints=17):
 
 
 class YoloKeypointLoss(nn.Module):
-    def __init__(self, strides_sizes=[8, 16, 32], image_size=(640, 640)):
+    def __init__(self, strides_sizes=[8, 16, 32], image_size=640):
         super(YoloKeypointLoss, self).__init__()
         self.strides_sizes = strides_sizes
         self.image_size = image_size
@@ -350,9 +350,37 @@ class YoloKeypointLoss(nn.Module):
         bs = output.size(0)
         num_kp = output.size(1) // 3
 
-        conf_mask = torch.zeros(bs, num_kp, 8400, device=output.device)
+        stride_idxs = []
 
+        for stride in self.strides_sizes:
+            grid_size = self.image_size // stride
+            block_x = gt_keypoints[:, :, 0] // stride
+            block_y = gt_keypoints[:, :, 1] // stride
+            stride_idxs.append(block_y * grid_size + block_x)
+
+        stride_idxs = torch.stack(stride_idxs, dim=2).long().to(output.device)
+
+        conf_mask = torch.zeros_like(conf)
+        x_loss = 0
+        y_loss = 0
         for i in range(bs):
             for j in range(num_kp):
-                for stride in self.strides_sizes:
-                    mask = torch.zeros(8400, device=output.device)
+                if keypoint_visibility[i, j] == 1:
+                    for k in range(1):
+                        idx = stride_idxs[i, j, k]
+                        conf_mask[i, j, idx] = 1
+                        x_loss += nn.functional.mse_loss(
+                            x_values[i, j, idx], gt_keypoints[i, j, 0]
+                        )
+                        y_loss += nn.functional.mse_loss(
+                            y_values[i, j, idx], gt_keypoints[i, j, 1]
+                        )
+
+        conf_loss = nn.functional.binary_cross_entropy(
+            conf, conf_mask, reduction="mean"
+        )
+
+        x_loss /= bs
+        y_loss /= bs
+
+        return conf_loss + x_loss + y_loss

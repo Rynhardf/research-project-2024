@@ -169,8 +169,7 @@ def visualize_output(image, keypoints, heatmaps):
 def get_keypoints(output, config):
     image_size = config["dataset"]["preprocess"]["input_size"]
     if config["model"]["name"] == "YOLO":
-        scales_sizes = config.get("scale_sizes", [80, 40, 20])
-        return get_keypoints_yolo(output, scales_sizes, image_size)
+        return get_keypoints_yolo(output)
     else:
         return get_keypoints_from_heatmaps(output, image_size)
 
