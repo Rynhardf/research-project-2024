@@ -280,6 +280,9 @@ class YOLO(nn.Module):
         return result
 
     def decode_kpt(self, output):
+        self.anchors = self.anchors.to(output.device)
+        self.strides = self.strides.to(output.device)
+
         output[:, 2::3, :] = torch.sigmoid(output[:, 2::3, :])
         output[:, 0::3, :] = (
             output[:, 0::3, :] * 2.0 + (self.anchors[0] - 0.5)
