@@ -222,6 +222,19 @@ def get_keypoints_from_heatmaps(heatmaps, image_size):
     return keypoints
 
 
+def get_keypoints_yolo(outputs, num_keypoints=17):
+    keypoints = []
+    for output in outputs:
+        xy = output.keypoints.xy[0]
+        if xy.shape[0] < num_keypoints:
+            xy = torch.cat(
+                (xy, torch.zeros(num_keypoints - xy.shape[0], 2).to(xy.device))
+            )
+        keypoints.append(xy)
+
+    return torch.stack(keypoints)
+
+
 def inference(config, images):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = load_model(config["model"])
