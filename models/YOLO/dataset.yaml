@@ -1,0 +1,9 @@
+train: ../../data/YOLO/train
+val: ../../data/YOLO/val
+
+# Keypoints
+kpt_shape: [17, 3] # number of keypoints, number of dims (2 for x,y or 3 for x,y,visible)
+
+# Classes dictionary
+names:
+  0: person
