@@ -100,7 +100,7 @@ def draw_keypoints(image, keypoints, keypoint_visibility, color=(0, 255, 0), tex
                 image_show, (int(keypoints[j][0]), int(keypoints[j][1])), 2, color, -1
             )
     cv2.putText(
-        image_show, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2, cv2.LINE_AA
+        image_show, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.3, color, 2, cv2.LINE_AA
     )
     return image_show
 
