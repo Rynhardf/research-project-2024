@@ -52,8 +52,8 @@ med_34: # Include small + some more points
     "RUPA",
     "LWRB",
     "RWRA",
-    "LTHI",
-    "RTHI",
+    "LMMED",
+    "RMMED",
   ]
 
 all_63:
