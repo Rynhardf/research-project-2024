@@ -1,8 +1,8 @@
-train: ../../data/YOLO_small_17/train
-val: ../../data/YOLO_small_17/val
+train: ../../../data/YOLO_med_34/train
+val: ../../../data/YOLO_med_34/val
 
 # Keypoints
-kpt_shape: [17, 3] # number of keypoints, number of dims (2 for x,y or 3 for x,y,visible)
+kpt_shape: [34, 3] # number of keypoints, number of dims (2 for x,y or 3 for x,y,visible)
 
 # Classes dictionary
 names:

@@ -1,5 +1,5 @@
 dataset:
-  keypoints: "med_34"
+  keypoints: "small_17"
   val: "./data/val.csv"
   train: "./data/train.csv"
   img_dir: "./data/cropped"
@@ -11,7 +11,7 @@ dataset:
 model:
   name: "HRNet"
   weights: "weights/pose_hrnet_w32_256x192.pth"
-  num_joints: 34
+  num_joints: 17
   W: 32
 
 training:

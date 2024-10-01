@@ -3,7 +3,7 @@ dataset:
   val: "./data/val.csv"
   train: "./data/train.csv"
   img_dir: "./data/cropped"
-  sigma: 3.0
+  sigma: 2.0
   preprocess:
     input_size: [192, 256]
     output_size: [48, 64]
@@ -19,7 +19,7 @@ model:
 
 training:
   epochs: 5
-  batch_size: 512
+  batch_size: 256
   optimizer: "adam"
   learning_rate: 0.001
   output_dir: "runs/"
