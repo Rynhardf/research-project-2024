@@ -508,6 +508,11 @@ class PoseHighResolutionNet(nn.Module):
             pretrained_state_dict = torch.load(
                 pretrained, map_location=device, weights_only=True
             )
+            new_weights = {}
+            for k, v in pretrained_state_dict.items():
+                new_key = k.replace('module.', '')  # Remove the "module." prefix
+                new_weights[new_key] = v
+            pretrained_state_dict = new_weights
             logger.info("=> loading pretrained model {}".format(pretrained))
 
             need_init_state_dict = {}

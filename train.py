@@ -82,10 +82,19 @@ def train_model(config):
 
     # Data loaders
     batch_size = config["training"]["batch_size"]
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=8)
+    train_loader = DataLoader(
+        train_dataset, batch_size=batch_size, shuffle=True, num_workers=8
+    )
+    val_loader = DataLoader(
+        val_dataset, batch_size=batch_size, shuffle=False, num_workers=8
+    )
 
-    model = load_model(config["model"]).to(device)
+    model = load_model(config["model"])
+    # Wrap model for multi-GPU training
+    if torch.cuda.device_count() > 1:
+        model = nn.DataParallel(model)
+    model.to(device)
+
     optimizer = get_optimizer(config, model)
     criterion = JointsMSELoss()
 
@@ -103,11 +112,9 @@ def train_model(config):
 
     # To log results
     results = {"epochs": []}
-    
+
     # do one validation run before starting the training
-    val_loss, norm_mae = validate(
-        model, val_loader, criterion, device, input_size
-    )
+    val_loss, norm_mae = validate(model, val_loader, criterion, device, input_size)
 
     print(
         f"Epoch [0/{num_epochs}],"
@@ -163,9 +170,7 @@ def train_model(config):
 
         epoch_time = time.time() - epoch_start_time  # Total time for the epoch
 
-        val_loss, norm_mae = validate(
-            model, val_loader, criterion, device, input_size
-        )
+        val_loss, norm_mae = validate(model, val_loader, criterion, device, input_size)
 
         print(
             f"Epoch [{epoch + 1}/{num_epochs}], Training Loss: {avg_train_loss:.6f}, "

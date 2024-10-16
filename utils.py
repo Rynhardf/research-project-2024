@@ -53,7 +53,13 @@ def load_model(config):
             weights = torch.load(config["weights"])
             if "state_dict" in weights.keys():
                 weights = weights["state_dict"]
-            model.init_weights(weights)
+
+            new_weights = {}
+            for k, v in weights.items():
+                new_key = k.replace('module.', '')  # Remove the "module." prefix
+                new_weights[new_key] = v
+
+            model.init_weights(new_weights)
     else:
         raise ValueError(
             f"Model {config['model']['name']} not recognized"
