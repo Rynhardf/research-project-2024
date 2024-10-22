@@ -303,31 +303,13 @@ def normalized_mae_in_pixels(predictions, targets, image_shape, keypoint_visibil
 
 
 def compute_oks(predictions, targets, keypoint_visibility, sigmas, image_area):
-    """
-    Compute Object Keypoint Similarity (OKS).
-
-    Args:
-        predictions: torch.Tensor (batch_size, num_keypoints, 2)
-            Model's predicted keypoint locations (x, y).
-        targets: torch.Tensor (batch_size, num_keypoints, 2)
-            Ground truth keypoint locations (x, y).
-        keypoint_visibility: torch.Tensor (batch_size, num_keypoints)
-            Visibility flags for keypoints (1 for visible, 0 for not visible).
-        sigmas: torch.Tensor (num_keypoints,)
-            Standard deviation values per keypoint type to weight their importance.
-        image_area: float
-            Area of the object (bounding box area, or entire image area).
-
-    Returns:
-        float: OKS score.
-    """
     # Compute the squared Euclidean distance between predicted and ground truth keypoints
     d_sq = ((predictions - targets) ** 2).sum(
         dim=-1
     )  # Shape (batch_size, num_keypoints)
 
     # Scale distance by the area and keypoint-specific sigma
-    scaled_d_sq = d_sq / (2 * (sigmas**2) * image_area)
+    scaled_d_sq = d_sq / (2 * (sigmas**2).unsqueeze(0) * image_area.unsqueeze(1))
 
     # Apply keypoint visibility mask
     oks = torch.exp(-scaled_d_sq) * keypoint_visibility
