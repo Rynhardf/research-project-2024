@@ -15,8 +15,8 @@ model:
   W: 48
 
 training:
-  epochs: 5
+  epochs: 10
   batch_size: 32
   optimizer: "adam"
-  learning_rate: 0.001
+  learning_rate: 0.01
   output_dir: "runs/"
