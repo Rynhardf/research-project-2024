@@ -1,5 +1,5 @@
 dataset:
-  keypoints: "med_34"
+  keypoints: "all_63"
   train: "./data/train.csv"
   val: "./data/val.csv"
   img_dir: "./data/cropped"
@@ -11,12 +11,12 @@ dataset:
 model:
   name: "HRNet"
   weights: "weights/pose_hrnet_w48_384x288.pth"
-  num_joints: 34
+  num_joints: 63
   W: 48
 
 training:
-  epochs: 10
+  epochs: 5
   batch_size: 32
   optimizer: "adam"
-  learning_rate: 0.01
+  learning_rate: 0.001
   output_dir: "runs/"
